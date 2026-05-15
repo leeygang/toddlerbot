@@ -880,7 +880,7 @@ class MJXEnv(PipelineEnv):
             "last_act": jnp.zeros(self.num_action),
             "rewards": dict.fromkeys(self.reward_names, 0.0),
             "imu_state": (jnp.zeros(3), jnp.zeros(3), jnp.zeros(3), jnp.zeros(3)),
-            "torso_height_max": 0,
+            "torso_height_max": 0.0,
             "push_step": 0,
             "push_remaining": 0,
             "push_id": 1,
