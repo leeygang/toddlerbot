@@ -915,10 +915,11 @@ def train(
             )
             if not args.torch:
                 last_ckpt_step = num_steps
-                episode_reward = float(metrics["episode/sum_reward"])
-                if episode_reward > best_episode_reward:
-                    best_episode_reward = episode_reward
-                    best_ckpt_step = num_steps
+                if "episode/sum_reward" in metrics:
+                    episode_reward = float(metrics["episode/sum_reward"])
+                    if episode_reward > best_episode_reward:
+                        best_episode_reward = episode_reward
+                        best_ckpt_step = num_steps
         else:
             if not args.torch:
                 for key in list(metrics.keys()):
