@@ -14,8 +14,10 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 import argparse
 import functools
+import git
 import importlib
 import json
+import pathlib
 import pkgutil
 import shutil
 import sys
@@ -30,25 +32,20 @@ import moviepy.editor as mpy
 import mujoco
 import numpy as np
 import numpy.typing as npt
-import torch
 import yaml
 from brax import base, envs
 from brax.io import model
-from brax.io.torch import jax_to_torch, torch_to_jax
 from brax.training.agents.ppo import networks as ppo_networks
 from brax.training.agents.ppo import train as ppo
 from flax import linen
 from mujoco.mjx._src import support
 from PIL import Image, ImageDraw, ImageFont
-from rsl_rl.utils import store_code_state
 from tqdm import tqdm
 
 import wandb
 from toddlerbot.locomotion.mjx_config import MJXConfig
 from toddlerbot.locomotion.mjx_env import MJXEnv, get_env_class
-from toddlerbot.locomotion.on_policy_runner import OnPolicyRunner
 from toddlerbot.locomotion.ppo_config import PPOConfig
-from toddlerbot.locomotion.rsl_rl_wrapper import RSLRLWrapper
 from toddlerbot.sim.robot import Robot
 from toddlerbot.utils.misc_utils import (
     dataclass2dict,
@@ -73,7 +70,64 @@ warnings.filterwarnings(
     module="jax._src.interpreters.xla",
 )
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+torch = None
+jax_to_torch = None
+torch_to_jax = None
+OnPolicyRunner = None
+RSLRLWrapper = None
+device = None
+
+
+def store_code_state(logdir, repositories) -> list:
+    """Store git status and diff snapshots for reproducibility."""
+    git_log_dir = os.path.join(logdir, "git")
+    os.makedirs(git_log_dir, exist_ok=True)
+    file_paths = []
+    for repository_file_path in repositories:
+        try:
+            repo = git.Repo(repository_file_path, search_parent_directories=True)
+            tree = repo.head.commit.tree
+        except Exception:
+            print(f"Could not find git repository in {repository_file_path}. Skipping.")
+            continue
+
+        repo_name = pathlib.Path(repo.working_dir).name
+        diff_file_name = os.path.join(git_log_dir, f"{repo_name}.diff")
+        if os.path.isfile(diff_file_name):
+            continue
+
+        print(f"Storing git diff for '{repo_name}' in: {diff_file_name}")
+        with open(diff_file_name, "x", encoding="utf-8") as f:
+            content = (
+                f"--- git status ---\n{repo.git.status()} \n\n\n"
+                f"--- git diff ---\n{repo.git.diff(tree)}"
+            )
+            f.write(content)
+        file_paths.append(diff_file_name)
+    return file_paths
+
+
+def load_torch_stack():
+    """Import the Torch/RSL stack only for paths that actually use it."""
+    global torch, jax_to_torch, torch_to_jax, OnPolicyRunner, RSLRLWrapper, device
+
+    if torch is not None:
+        return
+
+    import torch as torch_module
+    from brax.io.torch import jax_to_torch as jax_to_torch_fn
+    from brax.io.torch import torch_to_jax as torch_to_jax_fn
+    from toddlerbot.locomotion.on_policy_runner import (
+        OnPolicyRunner as OnPolicyRunnerClass,
+    )
+    from toddlerbot.locomotion.rsl_rl_wrapper import RSLRLWrapper as RSLRLWrapperClass
+
+    torch = torch_module
+    jax_to_torch = jax_to_torch_fn
+    torch_to_jax = torch_to_jax_fn
+    OnPolicyRunner = OnPolicyRunnerClass
+    RSLRLWrapper = RSLRLWrapperClass
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def dynamic_import_envs(env_package: str):
@@ -90,6 +144,8 @@ def dynamic_import_envs(env_package: str):
 
     # Iterate over all modules in the given package directory
     for _, module_name, _ in pkgutil.iter_modules(package_path):
+        if not module_name.endswith("_env"):
+            continue
         full_module_name = f"{env_package}.{module_name}"
         importlib.import_module(full_module_name)
 
@@ -1044,6 +1100,7 @@ def evaluate(
         make_networks_factory (Any): A factory function to create network architectures for the policy.
         run_name (str): The name of the run, used for saving and loading policy parameters.
     """
+    load_torch_stack()
     rsl_env = RSLRLWrapper(env, device, train_cfg, eval=True)
     runner_config = load_runner_config(train_cfg)
     if not args.symmetry and "symmetry_cfg" in runner_config["algorithm"]:
@@ -1211,6 +1268,8 @@ def main(args=None):
 
     args = parser.parse_args()
     args.torch = not args.brax
+    if args.torch:
+        load_torch_stack()
 
     gin_file_list = [args.env] + args.gin_file.split(" ")
     for gin_file in gin_file_list:
@@ -1298,7 +1357,13 @@ def main(args=None):
         if not os.path.exists(policy_path):
             policy_path = os.path.join("results", run_name, f"model_last{suffix}")
 
-        evaluate(test_env, train_cfg, policy_path, args)
+        if args.torch:
+            evaluate(test_env, train_cfg, policy_path, args)
+        else:
+            print(
+                "Skipping post-training Torch evaluation in Brax mode; "
+                "evaluate the JAX checkpoint separately if needed."
+            )
 
 
 if __name__ == "__main__":
