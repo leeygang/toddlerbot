@@ -1757,7 +1757,7 @@ class MJXEnv(PipelineEnv):
             state.info["command_obs"] = jnp.array([], dtype=jnp.float32)
 
         # Reset state_ref on failure (internal timeout already handled at step start)
-        state.info["state_ref"] = jax.tree_map(
+        state.info["state_ref"] = jax.tree_util.tree_map(
             lambda old, new: jnp.where(done, new, old),
             state.info["state_ref"],
             state.info["first_state_ref"],
