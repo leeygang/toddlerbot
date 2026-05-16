@@ -1,0 +1,14 @@
+{
+    "robot": "toddlerbot_2xc",
+    "env": "walk",
+    "eval": "",
+    "n_eval": 1,
+    "restore": "",
+    "ref": "",
+    "gin_file": "",
+    "gin_config": "PPOConfig.num_envs=2048; PPOConfig.batch_size=128",
+    "note": "wr_reference_full_brax_2048env",
+    "brax": true,
+    "symmetry": false,
+    "torch": false
+}

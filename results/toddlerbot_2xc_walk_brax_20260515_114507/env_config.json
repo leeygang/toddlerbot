@@ -1,0 +1,331 @@
+{
+    "action": {
+        "action_parts": [
+            "leg"
+        ],
+        "action_scale": 0.25,
+        "contact_force_threshold": 1.0,
+        "n_steps_delay": 1,
+        "n_frames": 4,
+        "cycle_time": 0.72
+    },
+    "commands": {
+        "resample_time": 3.0,
+        "zero_chance": 0.2,
+        "turn_chance": 0.2,
+        "command_obs_indices": [
+            5,
+            6,
+            7
+        ],
+        "command_range": [
+            [
+                -1.0,
+                1.0
+            ],
+            [
+                -1.0,
+                1.0
+            ],
+            [
+                0.0,
+                1.0
+            ],
+            [
+                -1.0,
+                1.0
+            ],
+            [
+                -1.0,
+                1.0
+            ],
+            [
+                -0.1,
+                0.1
+            ],
+            [
+                -0.05,
+                0.05
+            ],
+            [
+                -1.0,
+                1.0
+            ]
+        ],
+        "deadzone": [
+            0.05,
+            0.05,
+            0.2
+        ]
+    },
+    "curriculum": {
+        "disable_velocity_sampling": false
+    },
+    "domain_rand": {
+        "add_domain_rand": true,
+        "rand_init_state_indices": [
+            0
+        ],
+        "add_push": false,
+        "add_head_pose": true,
+        "backlash_activation": 0.1,
+        "backlash_range": [
+            0.02,
+            0.1
+        ],
+        "torso_roll_range": [
+            -0.1,
+            0.1
+        ],
+        "torso_pitch_range": [
+            -0.1,
+            0.1
+        ],
+        "persistent_torso_pitch_error_range": [
+            0.0,
+            0.0
+        ],
+        "persistent_torso_roll_error_range": [
+            0.0,
+            0.0
+        ],
+        "arm_joint_pos_range": [
+            -0.1,
+            0.1
+        ],
+        "friction_range": [
+            0.4,
+            1.0
+        ],
+        "damping_range": [
+            0.8,
+            1.2
+        ],
+        "armature_range": [
+            0.8,
+            1.2
+        ],
+        "frictionloss_range": [
+            0.8,
+            1.2
+        ],
+        "body_mass_range": [
+            -0.2,
+            0.2
+        ],
+        "hand_mass_range": [
+            0.0,
+            0.1
+        ],
+        "other_mass_range": [
+            0.0,
+            0.0
+        ],
+        "kp_range": [
+            0.9,
+            1.1
+        ],
+        "kd_range": [
+            0.9,
+            1.1
+        ],
+        "tau_max_range": [
+            0.9,
+            1.1
+        ],
+        "q_dot_tau_max_range": [
+            0.9,
+            1.1
+        ],
+        "q_dot_max_range": [
+            0.9,
+            1.1
+        ],
+        "kd_min_range": [
+            0.9,
+            1.1
+        ],
+        "tau_brake_max_range": [
+            0.9,
+            1.1
+        ],
+        "tau_q_dot_max_range": [
+            0.9,
+            1.1
+        ],
+        "box_height_range": [
+            0.1,
+            0.2
+        ],
+        "passive_active_ratio_range": [
+            0.5,
+            1.5
+        ],
+        "push_interval_s": 2.0,
+        "push_duration_s": 0.2,
+        "push_torso_range": [
+            1.0,
+            3.0
+        ],
+        "push_other_range": [
+            1.0,
+            3.0
+        ],
+        "rand_pos_offset": [
+            0.0,
+            0.0
+        ],
+        "rand_yaw_offset": 0.0
+    },
+    "noise": {
+        "level": 0.05,
+        "dof_pos": 1.0,
+        "dof_vel": 2.0,
+        "gyro_fc": 0.35,
+        "gyro_std": 0.25,
+        "gyro_bias_walk_std": 0.0002,
+        "gyro_white_std": 0.0,
+        "quat_fc": 0.25,
+        "quat_std": 0.1,
+        "quat_bias_walk_std": 0.0001,
+        "quat_white_std": 0.0,
+        "gyro_amp_min": 0.8,
+        "gyro_amp_max": 2.0,
+        "quat_amp_min": 0.8,
+        "quat_amp_max": 1.2
+    },
+    "obs": {
+        "use_phase_signal": true,
+        "frame_stack": 15,
+        "c_frame_stack": 15,
+        "num_single_obs": 84,
+        "num_single_privileged_obs": 151
+    },
+    "obs_scales": {
+        "lin_vel": 2.0,
+        "ang_vel": 1.0,
+        "dof_pos": 1.0,
+        "dof_vel": 0.05,
+        "quat": 1.0,
+        "actuator_force": 0.1
+    },
+    "obstacle_rand": {
+        "enabled": false,
+        "heights": [],
+        "spawn_y_offsets": [],
+        "spawn_z_offsets": []
+    },
+    "reward_scales": {
+        "torso_pos_xy": 0.0,
+        "torso_pos_z": 0.0,
+        "torso_quat": 2.5,
+        "torso_roll": 0.0,
+        "torso_pitch": 0.0,
+        "lin_vel_xy": 2.0,
+        "lin_vel_z": 0.0,
+        "ang_vel_xy": 0.0,
+        "ang_vel_z": 1.5,
+        "penalty_ang_vel_xy": 1.0,
+        "penalty_orientation": 0.0,
+        "motor_pos": 0.0,
+        "motor_torque": 0.0,
+        "energy": 0.0,
+        "action_rate": 0.0,
+        "penalty_action_rate": 2.0,
+        "penalty_pose": 0.5,
+        "penalty_close_feet_xy": 10.0,
+        "feet_contact": 0.0,
+        "contact_number": 0.0,
+        "collision": 0.0,
+        "survival": 0.0,
+        "alive": 1.0,
+        "feet_air_time": 0.0,
+        "feet_distance": 0.0,
+        "feet_xy_distance": 0.0,
+        "feet_slip": 0.0,
+        "feet_clearance": 0.0,
+        "feet_phase": 7.5,
+        "penalty_feet_ori": 5.0,
+        "stand_still": 0.0,
+        "align_ground": 0.0,
+        "body_quat": 0.0,
+        "site_pos": 0.0,
+        "body_lin_vel": 0.0,
+        "body_ang_vel": 0.0,
+        "hip_yaw": 0.0,
+        "heading_tracking": 0.0,
+        "xy_drift": 0.0,
+        "angular_velocity": 0.0
+    },
+    "rewards": {
+        "healthy_z_range": [
+            0.2,
+            1.0
+        ],
+        "pos_tracking_sigma": 200.0,
+        "rot_tracking_sigma": 20.0,
+        "lin_vel_tracking_sigma": 1000.0,
+        "ang_vel_tracking_sigma": 4.0,
+        "min_feet_y_dist": 0.07,
+        "max_feet_y_dist": 0.13,
+        "min_feet_xy_dist": 0.07,
+        "max_feet_xy_dist": 0.2,
+        "torso_roll_range": [
+            -0.1,
+            0.1
+        ],
+        "torso_pitch_range": [
+            -0.2,
+            0.2
+        ],
+        "add_regularization": true,
+        "use_exp_reward": true,
+        "leg_weight": 1.0,
+        "arm_weight": 1.0,
+        "neck_weight": 0.2,
+        "waist_weight": 0.2,
+        "swing_height": 0.04,
+        "feet_phase_tracking_sigma": 0.0007,
+        "pose_weights": [
+            0.01,
+            1.0,
+            5.0,
+            0.01,
+            5.0,
+            5.0,
+            0.01,
+            1.0,
+            5.0,
+            0.01,
+            5.0,
+            5.0
+        ],
+        "close_feet_threshold": 0.06
+    },
+    "sim": {
+        "timestep": 0.005,
+        "solver": 2,
+        "self_contact_pairs": null,
+        "playback_speed": 1.0,
+        "max_contact_points": null,
+        "max_geom_pairs": null
+    },
+    "terrain": {
+        "tile_width": 4.0,
+        "tile_length": 4.0,
+        "resolution_per_meter": 32,
+        "random_spawn": false,
+        "manual_map": [
+            [
+                "flat"
+            ]
+        ],
+        "robot_collision_geom_names": [
+            "left_ankle_roll_link_collision",
+            "right_ankle_roll_link_collision",
+            "left_hand_collision",
+            "right_hand_collision"
+        ],
+        "scene": null
+    }
+}

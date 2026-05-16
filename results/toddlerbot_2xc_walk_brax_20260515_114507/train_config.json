@@ -1,0 +1,40 @@
+{
+    "wandb_project": "ToddlerBot",
+    "wandb_entity": "toddlerbot",
+    "policy_hidden_layer_sizes": [
+        512,
+        256,
+        128
+    ],
+    "value_hidden_layer_sizes": [
+        512,
+        256,
+        128
+    ],
+    "use_rnn": false,
+    "rnn_type": "lstm",
+    "rnn_hidden_size": 512,
+    "rnn_num_layers": 1,
+    "activation": "elu",
+    "distribution_type": "normal",
+    "noise_std_type": "log",
+    "init_noise_std": 0.5,
+    "num_timesteps": 1000000000,
+    "num_evals": 100,
+    "episode_length": 1000,
+    "unroll_length": 20,
+    "num_updates_per_batch": 4,
+    "discounting": 0.97,
+    "gae_lambda": 0.95,
+    "max_grad_norm": 1.0,
+    "normalize_advantage": true,
+    "normalize_observation": false,
+    "learning_rate": 3e-05,
+    "entropy_cost": 0.0005,
+    "clipping_epsilon": 0.2,
+    "num_envs": 2048,
+    "render_nums": 20,
+    "batch_size": 128,
+    "num_minibatches": 16,
+    "seed": 0
+}
