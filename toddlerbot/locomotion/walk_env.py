@@ -206,29 +206,29 @@ class WalkEnv(MJXEnv, env_name="walk"):
         camera: str | None = None,
     ):
         """Render environment states with path visualization and force arrows."""
-        renderer = mujoco.Renderer(self.sys.mj_model, height=height, width=width)
         camera = camera or -1
 
         push_id = states[0].info["push_id"]
         push_force = numpy.concatenate([states[0].info["push"], numpy.zeros(1)])
         image_list = []
-        for state in states:
-            d = mujoco.MjData(self.sys.mj_model)
-            d.qpos, d.qvel = state.pipeline_state.q, state.pipeline_state.qd
-            mujoco.mj_forward(self.sys.mj_model, d)
-            renderer.update_scene(d, camera=camera)
-            if numpy.linalg.norm(state.info["push"]) > 0:
-                push_id = state.info["push_id"]
-                push_force = numpy.concatenate([state.info["push"], numpy.zeros(1)])
+        with mujoco.Renderer(self.sys.mj_model, height=height, width=width) as renderer:
+            for state in states:
+                d = mujoco.MjData(self.sys.mj_model)
+                d.qpos, d.qvel = state.pipeline_state.q, state.pipeline_state.qd
+                mujoco.mj_forward(self.sys.mj_model, d)
+                renderer.update_scene(d, camera=camera)
+                if numpy.linalg.norm(state.info["push"]) > 0:
+                    push_id = state.info["push_id"]
+                    push_force = numpy.concatenate([state.info["push"], numpy.zeros(1)])
 
-            self.visualize_path_frame(
-                renderer,
-                state.info["state_ref"]["path_pos"],
-                state.info["state_ref"]["path_rot"],
-            )
-            self.visualize_force_arrow(renderer, state, push_id, push_force)
-            self.visualize_feet_phase(renderer, state, d)
-            image_list.append(renderer.render())
+                self.visualize_path_frame(
+                    renderer,
+                    state.info["state_ref"]["path_pos"],
+                    state.info["state_ref"]["path_rot"],
+                )
+                self.visualize_force_arrow(renderer, state, push_id, push_force)
+                self.visualize_feet_phase(renderer, state, d)
+                image_list.append(renderer.render())
 
         return image_list
 

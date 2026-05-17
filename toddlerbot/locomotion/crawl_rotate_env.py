@@ -369,42 +369,42 @@ class CrawlRotateEnv(MJXEnv, env_name="crawl_rotate"):
         Returns:
             List of rendered images (numpy arrays)
         """
-        renderer = mujoco.Renderer(self.sys.mj_model, height=height, width=width)
         camera = camera or -1
 
         image_list = []
-        for state in states:
-            d = mujoco.MjData(self.sys.mj_model)
-            d.qpos, d.qvel = state.pipeline_state.q, state.pipeline_state.qd
-            mujoco.mj_forward(self.sys.mj_model, d)
-            renderer.update_scene(d, camera=camera)
+        with mujoco.Renderer(self.sys.mj_model, height=height, width=width) as renderer:
+            for state in states:
+                d = mujoco.MjData(self.sys.mj_model)
+                d.qpos, d.qvel = state.pipeline_state.q, state.pipeline_state.qd
+                mujoco.mj_forward(self.sys.mj_model, d)
+                renderer.update_scene(d, camera=camera)
 
-            # Extract target yaw from state info
-            # Recompute target_yaw using same logic as reward function
-            initial_yaw = state.info.get("initial_yaw", 0.0)
-            # Compute elapsed time from step count (state.info["time"] doesn't exist!)
-            elapsed_time = state.info.get("step", 0) * self.dt
+                # Extract target yaw from state info
+                # Recompute target_yaw using same logic as reward function
+                initial_yaw = state.info.get("initial_yaw", 0.0)
+                # Compute elapsed time from step count (state.info["time"] doesn't exist!)
+                elapsed_time = state.info.get("step", 0) * self.dt
 
-            if elapsed_time < self.rotation_start_delay:
-                rotation_time = 0.0
-            else:
-                rotation_time = elapsed_time - self.rotation_start_delay
+                if elapsed_time < self.rotation_start_delay:
+                    rotation_time = 0.0
+                else:
+                    rotation_time = elapsed_time - self.rotation_start_delay
 
-            target_yaw = initial_yaw + (rotation_time * self.target_angular_velocity)
-            target_yaw = numpy.arctan2(numpy.sin(target_yaw), numpy.cos(target_yaw))
+                target_yaw = initial_yaw + (rotation_time * self.target_angular_velocity)
+                target_yaw = numpy.arctan2(numpy.sin(target_yaw), numpy.cos(target_yaw))
 
-            # Get initial XY position (where robot should stay centered)
-            initial_xy = state.info.get("initial_xy", numpy.zeros(2))
+                # Get initial XY position (where robot should stay centered)
+                initial_xy = state.info.get("initial_xy", numpy.zeros(2))
 
-            # Visualize target heading at initial XY position
-            self.visualize_target_heading(renderer, initial_xy, target_yaw)
+                # Visualize target heading at initial XY position
+                self.visualize_target_heading(renderer, initial_xy, target_yaw)
 
-            # Visualize current heading (torso→head line on ground)
-            # Body indices: 0=torso, 3=head (world body excluded from pipeline_state)
-            torso_xy = numpy.array(state.pipeline_state.x.pos[0, :2])
-            head_xy = numpy.array(state.pipeline_state.x.pos[3, :2])
-            self.visualize_current_heading(renderer, torso_xy, head_xy)
+                # Visualize current heading (torso→head line on ground)
+                # Body indices: 0=torso, 3=head (world body excluded from pipeline_state)
+                torso_xy = numpy.array(state.pipeline_state.x.pos[0, :2])
+                head_xy = numpy.array(state.pipeline_state.x.pos[3, :2])
+                self.visualize_current_heading(renderer, torso_xy, head_xy)
 
-            image_list.append(renderer.render())
+                image_list.append(renderer.render())
 
         return image_list
