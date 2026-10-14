@@ -20,6 +20,9 @@ Built entirely in Python, it is **fully pip-installable** (python >= 3.10) for s
 ## Setup
 Refer to [this page](https://hshi74.github.io/toddlerbot/software/01_setup.html) for instructions to setup.
 
+For the pinned paper walking experiment on `paper-walking-baseline`, see
+[PAPER_WALKING.md](PAPER_WALKING.md).
+
 
 ## Walkthrough
 

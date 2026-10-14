@@ -266,6 +266,11 @@ class PaperWalkingTest(unittest.TestCase):
                 finite = json.loads((checkpoint / "finite.json").read_text())
                 self.assertEqual(finite["parameters_finite"], not bad_parameters)
                 self.assertEqual(finite["metrics_finite"], bad_parameters)
+                provenance = json.loads((Path(folder) / "provenance.json").read_text())
+                self.assertEqual(
+                    provenance["brax_revision"],
+                    "14147806f6c25724ba830ba36764df3243889b0d",
+                )
 
 
 if __name__ == "__main__":
