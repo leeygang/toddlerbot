@@ -170,8 +170,12 @@ class ZMPWalk:
             for i in range(num_cycles):
                 left_footstep = left_footstep_init.copy()
                 right_footstep = right_footstep_init.copy()
-                left_footstep[:2] += i * 2 * stride
-                right_footstep[:2] += (i * 2 + 1) * stride
+                left_footstep = inplace_update(
+                    left_footstep, slice(None, 2), left_footstep[:2] + i * 2 * stride
+                )
+                right_footstep = inplace_update(
+                    right_footstep, slice(None, 2), right_footstep[:2] + (i * 2 + 1) * stride
+                )
                 footsteps.append(left_footstep)
                 footsteps.append(right_footstep)
 
@@ -397,12 +401,12 @@ class ZMPWalk:
                     offset = np.zeros(2, dtype=np.float32)
 
                 target_pos = inplace_update(
-                    current_pos,
+                    current_pos.copy(),
                     slice(swing_leg * 3, swing_leg * 3 + 2),
                     footsteps[i + 1][:2] + offset,
                 )
                 target_ori = inplace_update(
-                    current_ori, swing_leg * 3 + 2, footsteps[i + 1][2]
+                    current_ori.copy(), swing_leg * 3 + 2, footsteps[i + 1][2]
                 )
                 last_pos = target_pos.copy()
                 last_ori = target_ori.copy()

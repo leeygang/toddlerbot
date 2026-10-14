@@ -1,16 +1,21 @@
 import os
 
 os.environ["USE_JAX"] = "true"
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
 os.environ["XLA_FLAGS"] = "--xla_gpu_triton_gemm_any=true"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 import argparse
 import functools
+import hashlib
 import importlib
+import importlib.metadata
 import json
 import pkgutil
 import shutil
+import subprocess
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import gin
@@ -185,6 +190,7 @@ def get_body_mass_attr_range(
     ee_mass_range: List[float],
     other_mass_range: List[float],
     num_envs: int,
+    rng=None,
 ):
     """Generates a range of body mass attributes for a robot across multiple environments.
 
@@ -198,6 +204,7 @@ def get_body_mass_attr_range(
         ee_mass_range (List[float]): The range of mass deltas for the end-effector.
         other_mass_range (List[float]): The range of mass deltas for other body parts.
         num_envs (int): The number of environments to generate.
+        rng: Optional NumPy generator for reproducible mass-grid permutations.
 
     Returns:
         Dict[str, jax.Array | npt.NDArray[np.float32]]: A dictionary with keys representing
@@ -220,9 +227,10 @@ def get_body_mass_attr_range(
         other_mass_range[0], other_mass_range[1], num_envs
     )
     # Randomize the order of the body mass deltas
-    body_mass_delta_list = np.random.permutation(body_mass_delta_list)
-    ee_mass_delta_list = np.random.permutation(ee_mass_delta_list)
-    other_mass_delta_list = np.random.permutation(other_mass_delta_list)
+    rng = np.random if rng is None else rng
+    body_mass_delta_list = rng.permutation(body_mass_delta_list)
+    ee_mass_delta_list = rng.permutation(ee_mass_delta_list)
+    other_mass_delta_list = rng.permutation(other_mass_delta_list)
 
     # Create lists to store attributes for all environments
     body_mass_list = []
@@ -290,7 +298,7 @@ def domain_randomize(
     armature_range: List[float],
     frictionloss_range: List[float],
     body_mass_attr_range: Optional[Dict[str, jax.Array | npt.NDArray[np.float32]]],
-) -> Tuple[base.System, base.System]:
+) -> Tuple[base.System, base.System, jax.Array]:
     """Randomizes the physical parameters of a system within specified ranges.
 
     Args:
@@ -303,7 +311,8 @@ def domain_randomize(
         body_mass_attr_range (Optional[Dict[str, jax.Array | npt.NDArray[np.float32]]]): Optional dictionary specifying ranges for body mass attributes.
 
     Returns:
-        Tuple[base.System, base.System]: A tuple containing the randomized system and the in_axes configuration for JAX transformations.
+        Tuple[base.System, base.System, jax.Array]: Randomized system, vmap axes,
+            and the empty embedding required by the released Brax wrapper.
     """
 
     @jax.vmap
@@ -378,7 +387,8 @@ def domain_randomize(
     in_axes = in_axes.tree_replace(in_axes_dict)
     sys = sys.tree_replace(sys_dict)
 
-    return sys, in_axes
+    # The released Brax fork expects an embedding, unused by this TB actor.
+    return sys, in_axes, jnp.zeros((rng.shape[0], 0))
 
 
 def train(
@@ -422,6 +432,35 @@ def train(
     with open(os.path.join(exp_folder_path, "env_config.json"), "w") as f:
         json.dump(env_config_dict, f, indent=4)
 
+    provenance = {
+        "source_revision": subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True
+        ).strip(),
+        "source_dirty": bool(subprocess.check_output(
+            ["git", "status", "--porcelain"], text=True
+        ).strip()),
+        "brax_revision": subprocess.check_output(
+            ["git", "-C", "toddlerbot/brax", "rev-parse", "HEAD"], text=True
+        ).strip(),
+        "packages": {
+            name: importlib.metadata.version(name)
+            for name in ("jax", "jaxlib", "mujoco", "mujoco-mjx", "brax", "flax",
+                         "optax", "orbax-checkpoint", "numpy")
+        },
+        "devices": [str(device) for device in jax.devices()],
+        "xy_eval_seed": 12102,
+        "checkpoint_contents": "normalizer, policy and value parameters; no Adam/RNG/environment state",
+        "xla_python_client_preallocate": os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"],
+    }
+    robot_dir = Path("toddlerbot/descriptions") / env.robot.name
+    provenance["model_reference_sha256"] = {
+        str(path): hashlib.sha256(path.read_bytes()).hexdigest()
+        for pattern in ("*.xml", "*.json", "walk_zmp_lookup_table.pkl")
+        for path in sorted(robot_dir.glob(pattern))
+    }
+    with open(os.path.join(exp_folder_path, "provenance.json"), "w") as f:
+        json.dump(provenance, f, indent=4)
+
     # Print the env config
     print("Env Config:")
     print(json.dumps(env_config_dict, indent=4))  # Pretty-print the config
@@ -431,6 +470,7 @@ def train(
         os.path.join("toddlerbot", "locomotion"),
         os.path.join(exp_folder_path, "locomotion"),
     )
+    shutil.copy2("requirements-paper.lock", exp_folder_path)
 
     wandb.init(
         project="ToddlerBot",
@@ -448,6 +488,21 @@ def train(
         orbax_checkpointer.save(path, params, force=True, save_args=save_args)
         policy_path = os.path.join(path, "policy")
         model.save_params(policy_path, (params[0], params[1].policy))
+        finite = all(np.isfinite(np.asarray(x)).all() for x in jax.tree.leaves(params))
+        with open(os.path.join(path, "finite.json"), "w") as f:
+            json.dump({"parameters_finite": finite, "metrics_finite": last_metrics_finite}, f)
+        if not finite or not last_metrics_finite:
+            raise FloatingPointError(f"Nonfinite checkpoint retained at {path}")
+        shutil.copy2(policy_path, os.path.join(exp_folder_path, "policy"))
+        if xy_evaluator is not None:
+            result = xy_evaluator.evaluate((params[0], params[1].policy))
+            with open(os.path.join(exp_folder_path, "xy_evaluation.jsonl"), "a") as f:
+                json.dump({"num_steps": int(current_step), **result}, f, allow_nan=False)
+                f.write("\n")
+            for condition in result["conditions"]:
+                print(f"XY {condition['name']}: falls={condition['fall_count']}/"
+                      f"{condition['episodes']}, "
+                      f"MAE={condition['groups']['all']['xy_error_m_s']['mean']}")
 
     learning_rate_schedule_fn = optax.cosine_decay_schedule(
         train_cfg.learning_rate,
@@ -476,10 +531,40 @@ def train(
             body_mass_attr_range=body_mass_attr_range,
         )
 
+    xy_evaluator = None
+    if train_cfg.evaluate_xy:
+        from toddlerbot.locomotion.evaluate_xy import XYEvaluator
+
+        xy_randomize_fn = None
+        if domain_randomize_fn is not None:
+            xy_mass_attrs = None
+            if not env.fixed_base:
+                xy_mass_attrs = get_body_mass_attr_range(
+                    env.robot,
+                    env.cfg.domain_rand.body_mass_range,
+                    env.cfg.domain_rand.ee_mass_range,
+                    env.cfg.domain_rand.other_mass_range,
+                    train_cfg.num_eval_envs,
+                    rng=np.random.default_rng(12102),
+                )
+            xy_randomize_fn = functools.partial(
+                domain_randomize_fn, body_mass_attr_range=xy_mass_attrs
+            )
+        networks = make_networks_factory(
+            env.obs_size * env.num_obs_history,
+            env.privileged_obs_size * env.num_privileged_obs_history,
+            env.action_size,
+        )
+        xy_evaluator = XYEvaluator(
+            eval_env, ppo_networks.make_inference_fn(networks),
+            train_cfg.num_eval_envs, train_cfg.episode_length, xy_randomize_fn,
+        )
+
     train_fn = functools.partial(
         ppo.train,
         num_timesteps=train_cfg.num_timesteps,
         num_evals=train_cfg.num_evals,
+        num_eval_envs=train_cfg.num_eval_envs,
         episode_length=train_cfg.episode_length,
         unroll_length=train_cfg.unroll_length,
         num_minibatches=train_cfg.num_minibatches,
@@ -502,22 +587,26 @@ def train(
 
     times = [time.time()]
 
-    last_ckpt_step = 0
     best_ckpt_step = 0
     best_episode_reward = -float("inf")
+    last_metrics_finite = True
 
     def progress(num_steps: int, metrics: Dict[str, Any]):
-        nonlocal best_episode_reward, best_ckpt_step, last_ckpt_step
+        nonlocal best_episode_reward, best_ckpt_step, last_metrics_finite
 
         times.append(time.time())
 
-        if last_ckpt_step > 0:
-            shutil.copy2(
-                os.path.join(exp_folder_path, str(last_ckpt_step), "policy"),
-                os.path.join(exp_folder_path, "policy"),
-            )
-
-        last_ckpt_step = num_steps
+        raw_metrics = {key: float(value) for key, value in metrics.items()}
+        last_metrics_finite = all(np.isfinite(value) for value in raw_metrics.values())
+        with open(os.path.join(exp_folder_path, "metrics.jsonl"), "a") as f:
+            json.dump({
+                "num_steps": int(num_steps),
+                "time_elapsed_s": times[-1] - times[0],
+                "finite": last_metrics_finite,
+                "metrics": {key: value if np.isfinite(value) else None
+                            for key, value in raw_metrics.items()},
+            }, f, allow_nan=False)
+            f.write("\n")
 
         episode_reward = float(metrics.get("eval/episode_reward", 0.0))
         if episode_reward > best_episode_reward:
@@ -566,7 +655,9 @@ def evaluate(
         log_every (int, optional): The frequency (in steps) at which metrics are logged. Defaults to 100.
     """
     ppo_network = make_networks_factory(
-        env.obs_size, env.privileged_obs_size, env.action_size
+        env.obs_size * env.num_obs_history,
+        env.privileged_obs_size * env.num_privileged_obs_history,
+        env.action_size,
     )
     make_policy = ppo_networks.make_inference_fn(ppo_network)
     policy_path = os.path.join("results", run_name, "best_policy")
@@ -622,6 +713,11 @@ def main(args=None):
         FileNotFoundError: If a specified gin configuration file or evaluation run is not found.
     """
     parser = argparse.ArgumentParser(description="Train the mjx policy.")
+    parser.add_argument(
+        "--skip-video",
+        action="store_true",
+        help="Skip post-training video; retained checkpoints still receive quantitative evaluation.",
+    )
     parser.add_argument(
         "--robot",
         type=str,
@@ -691,6 +787,7 @@ def main(args=None):
     EnvClass = get_env_class(args.env)
     env_cfg = MJXConfig()
     train_cfg = PPOConfig()
+    np.random.seed(train_cfg.seed)
 
     kwargs = {}
     if len(args.ref) > 0:
@@ -765,7 +862,8 @@ def main(args=None):
             raise FileNotFoundError(f"Run {args.eval} not found.")
     else:
         train(env, eval_env, make_networks_factory, train_cfg, run_name, args.restore)
-        evaluate(test_env, make_networks_factory, run_name)
+        if not args.skip_video:
+            evaluate(test_env, make_networks_factory, run_name)
 
 
 if __name__ == "__main__":

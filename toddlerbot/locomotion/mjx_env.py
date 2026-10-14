@@ -384,13 +384,14 @@ class MJXEnv(PipelineEnv):
         """
         return self.num_action
 
-    def reset(self, rng: jax.Array) -> State:
+    def reset(self, rng: jax.Array, command: Optional[jax.Array] = None) -> State:
         """Resets the environment state and initializes various components for a new episode.
 
         This function splits the input random number generator (RNG) into multiple streams for different components, initializes the state information dictionary, and sets up the initial positions, velocities, and commands for the environment. It also applies domain randomization if enabled and prepares observation histories.
 
         Args:
             rng (jax.Array): The random number generator state for initializing the environment.
+            command: Optional explicit evaluation command; otherwise sample normally.
 
         Returns:
             State: The initialized state of the environment, including pipeline state, observations, rewards, and other relevant information.
@@ -441,7 +442,8 @@ class MJXEnv(PipelineEnv):
         state_ref = jnp.concatenate(
             [path_pos, path_quat, lin_vel, ang_vel, motor_pos, joint_pos, stance_mask]
         )
-        command = self._sample_command(rng_command)
+        if command is None:
+            command = self._sample_command(rng_command)
         state_ref = jnp.asarray(self.motion_ref.get_state_ref(state_ref, 0.0, command))
         qpos = jnp.asarray(self.motion_ref.get_qpos_ref(state_ref, path_frame=False))
 

@@ -103,14 +103,14 @@ class ExpPlusPPoly:
         # Determine the index of the segment that contains the time t
         segment_index = np.searchsorted(self.ppoly.x, t, side="right") - 1
         # Ensure the index is within the valid range
-        segment_index = max(0, min(segment_index, len(self.ppoly.x) - 2))
+        segment_index = np.clip(segment_index, 0, len(self.ppoly.x) - 2)
         # Calculate the time offset from the beginning of the segment
         tj = self.ppoly.x[segment_index]
         # Compute the exponential part
         exponential = expm(self.A * (t - tj))
         # Compute the result by combining the polynomial and exponential parts
         result += (
-            self.K @ exponential @ self.alpha[:, segment_index : segment_index + 1]
+            self.K @ exponential @ self.alpha[:, segment_index][:, None]
         ).flatten()
 
         return result

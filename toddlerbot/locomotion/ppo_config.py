@@ -13,6 +13,8 @@ class PPOConfig:
     value_hidden_layer_sizes: Tuple[int, ...] = (512, 256, 128)
     num_timesteps: int = 100_000_000
     num_evals: int = 1000
+    num_eval_envs: int = 128
+    evaluate_xy: bool = False
     episode_length: int = 1000
     unroll_length: int = 20
     num_updates_per_batch: int = 4
