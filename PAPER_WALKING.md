@@ -81,10 +81,26 @@ After installation, select the environment once per terminal:
 export UV_PROJECT_ENVIRONMENT=.venv-paper UV_PYTHON=3.10 WANDB_MODE=offline
 ```
 
-Check the GPU before the long run. Continue only if this succeeds:
+Check GPU detection and actual JIT compilation before the long run. This
+loads the trainer's XLA settings and checks a small GPU matrix product
+against NumPy. Device enumeration alone does not verify compiler support.
+Continue only if this succeeds:
 
 ```bash
-uv run --no-sync python -c 'import jax; print(jax.devices()); assert jax.default_backend() == "gpu"'
+uv run --no-sync python - <<'PY'
+from toddlerbot.locomotion import train_mjx
+import jax
+import jax.numpy as jnp
+import numpy as np
+
+print("JAX", jax.__version__, "devices", jax.devices())
+assert jax.default_backend() == "gpu"
+x = jnp.arange(64, dtype=jnp.float32).reshape(8, 8)
+actual = jax.jit(lambda a: a @ a.T)(x).block_until_ready()
+reference = np.asarray(x) @ np.asarray(x).T
+np.testing.assert_allclose(np.asarray(actual), reference, rtol=1e-5, atol=1e-5)
+print("GPU JIT compilation passed")
+PY
 ```
 
 Then launch the native trainer directly:
