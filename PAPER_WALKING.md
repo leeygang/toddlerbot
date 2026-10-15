@@ -25,6 +25,19 @@ branch created from newer `main` may have the same name but different code;
 if the fast-forward fails, preserve that branch and inspect its history
 before proceeding.
 
+For a clean checkout where the current `paper-walking-baseline` branch is
+still at the newer `main` commit `f81679b`, preserve it under a backup name
+and check out the published branch with tracking:
+
+```bash
+git fetch origin paper-walking-baseline
+git branch -m paper-walking-baseline-before-import-f81679b
+git switch --track -c paper-walking-baseline origin/paper-walking-baseline
+git rev-parse --short HEAD
+```
+
+The published prepared code should show `586d4dd`. Then install below.
+
 ```bash
 (
   set -eu
