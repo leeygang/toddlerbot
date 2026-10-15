@@ -14,16 +14,32 @@ The original ZMP cache SHA256 is
 
 ## Install the training environment
 
-Once the prepared branch is available in your existing TB checkout, run from
-its repository root. On the GPU host this is `~/projects/ToddlerBot`.
+Install on each machine that will run training or tests. The environment
+prepared on the Mac does not install dependencies on the GPU host. Run from
+the repository root; on the GPU host this is `~/projects/toddlerbot`.
+
+Fetch the published branch and verify its history before installing. The
+prepared code commit is `586d4dd65bed4d5e8066a98b6210b2b3a85f7144`.
+`origin` must point to the fork containing `paper-walking-baseline`. A local
+branch created from newer `main` may have the same name but different code;
+if the fast-forward fails, preserve that branch and inspect its history
+before proceeding.
 
 ```bash
 (
   set -eu
+  git fetch origin paper-walking-baseline
   git switch paper-walking-baseline
+  git merge --ff-only origin/paper-walking-baseline
+  git branch --set-upstream-to=origin/paper-walking-baseline paper-walking-baseline
+  git merge-base --is-ancestor 586d4dd65bed4d5e8066a98b6210b2b3a85f7144 HEAD
   git submodule update --init --recursive
-  uv venv --python 3.10 .venv-paper
+  if [ ! -x .venv-paper/bin/python ]; then
+    uv venv --python 3.10 .venv-paper
+  fi
+  .venv-paper/bin/python -c 'import sys; assert sys.version_info[:2] == (3, 10), "Recreate .venv-paper with Python 3.10"'
   uv pip sync --python .venv-paper/bin/python requirements-paper.lock
+  uv pip check --python .venv-paper/bin/python
 )
 ```
 
@@ -32,18 +48,40 @@ MuJoCo/MJX 3.2.4, the pinned Brax fork, Flax 0.8.4, Optax 0.2.2 and
 Orbax 0.5.23. Linux installs the matching CUDA 12 plugin. The existing `.venv`
 is preserved. Training requires no WR2 checkout or launcher script.
 
-## Launch the native trainer
-
-From the TB repository root on the GPU host:
+If an earlier `uv run --no-sync` created an empty Python 3.11 `.venv-paper`,
+recreate that environment and install the complete lock:
 
 ```bash
-(
-  set -eu
-  .venv-paper/bin/python -c 'import jax; print(jax.devices()); assert jax.default_backend() == "gpu"'
-  WANDB_MODE=offline .venv-paper/bin/python -m toddlerbot.locomotion.train_mjx \
-    --robot toddlerbot --env walk --gin-files paper --skip-video
-)
+uv venv --clear --python 3.10 .venv-paper
+uv pip sync --python .venv-paper/bin/python requirements-paper.lock
 ```
+
+`--clear` replaces only `.venv-paper`. `uv run --no-sync` runs an already
+installed environment; it does not install the lock, and can create an empty
+environment when none exists.
+
+## Launch the native trainer
+
+After installation, select the environment once per terminal:
+
+```bash
+export UV_PROJECT_ENVIRONMENT=.venv-paper UV_PYTHON=3.10 WANDB_MODE=offline
+```
+
+Check the GPU before the long run. Continue only if this succeeds:
+
+```bash
+uv run --no-sync python -c 'import jax; print(jax.devices()); assert jax.default_backend() == "gpu"'
+```
+
+Then launch the native trainer directly:
+
+```bash
+uv run --no-sync -m toddlerbot.locomotion.train_mjx --gin-files paper --skip-video
+```
+
+The robot and environment default to `toddlerbot` and `walk`. `--no-sync`
+retains the packages installed from `requirements-paper.lock`.
 
 Start fresh. Native `--restore` is a policy/value/normalizer warm start; it does
 not restore Adam, RNG, counters or environment state. `--skip-video` skips the
