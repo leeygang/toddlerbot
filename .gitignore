@@ -137,6 +137,7 @@ celerybeat.pid
 .env
 .venv
 .venv-paper/
+.venv-paper-blackwell/
 env/
 venv/
 ENV/

@@ -9,7 +9,6 @@ import argparse
 import functools
 import hashlib
 import importlib
-import importlib.metadata
 import json
 import pkgutil
 import shutil
@@ -38,12 +37,16 @@ from tqdm import tqdm
 import wandb
 from toddlerbot.locomotion.mjx_config import MJXConfig
 from toddlerbot.locomotion.mjx_env import MJXEnv, get_env_class
+from toddlerbot.locomotion.paper_environment import (
+    installed_packages,
+    matching_dependency_lock,
+)
 from toddlerbot.locomotion.ppo_config import PPOConfig
 from toddlerbot.sim.robot import Robot
 from toddlerbot.utils.file_utils import find_robot_file_path
 from toddlerbot.utils.misc_utils import dataclass2dict, parse_value
 
-jax.config.update("jax_default_matmul_precision", jax.lax.Precision.HIGH)
+jax.config.update("jax_default_matmul_precision", "high")
 
 
 def dynamic_import_envs(env_package: str):
@@ -432,6 +435,7 @@ def train(
     with open(os.path.join(exp_folder_path, "env_config.json"), "w") as f:
         json.dump(env_config_dict, f, indent=4)
 
+    dependency_lock = matching_dependency_lock()
     provenance = {
         "source_revision": subprocess.check_output(
             ["git", "rev-parse", "HEAD"], text=True
@@ -442,15 +446,18 @@ def train(
         "brax_revision": subprocess.check_output(
             ["git", "-C", "toddlerbot/brax", "rev-parse", "HEAD"], text=True
         ).strip(),
-        "packages": {
-            name: importlib.metadata.version(name)
-            for name in ("jax", "jaxlib", "mujoco", "mujoco-mjx", "brax", "flax",
-                         "optax", "orbax-checkpoint", "numpy")
-        },
+        "packages": installed_packages(),
+        "dependency_lock": str(dependency_lock) if dependency_lock else None,
+        "dependency_lock_sha256": (
+            hashlib.sha256(dependency_lock.read_bytes()).hexdigest()
+            if dependency_lock else None
+        ),
         "devices": [str(device) for device in jax.devices()],
+        "device_kinds": [device.device_kind for device in jax.devices()],
         "xy_eval_seed": 12102,
         "checkpoint_contents": "normalizer, policy and value parameters; no Adam/RNG/environment state",
         "xla_python_client_preallocate": os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"],
+        "xla_flags": os.environ["XLA_FLAGS"],
     }
     robot_dir = Path("toddlerbot/descriptions") / env.robot.name
     provenance["model_reference_sha256"] = {
@@ -470,7 +477,8 @@ def train(
         os.path.join("toddlerbot", "locomotion"),
         os.path.join(exp_folder_path, "locomotion"),
     )
-    shutil.copy2("requirements-paper.lock", exp_folder_path)
+    if dependency_lock is not None:
+        shutil.copy2(dependency_lock, exp_folder_path)
 
     wandb.init(
         project="ToddlerBot",

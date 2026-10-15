@@ -1,0 +1,15 @@
+# Hardware compatibility overrides for Blackwell (e.g. RTX 5070, SM 12.0).
+# The generated GPU lock targets Linux x86_64 with Python 3.10.
+# Keep the v1.0.0 Brax source and MuJoCo/MJX pins in requirements-paper.in.
+# Generate the separate lock with:
+# uv pip compile requirements-paper.in --overrides requirements-paper-blackwell.in --python-version 3.10 --python-platform x86_64-unknown-linux-gnu --no-strip-markers --output-file requirements-paper-blackwell.lock
+# The Brax fork's original JAX/JAXlib/Orbax metadata pins are intentionally
+# overridden here; the baseline requirements-paper.lock is unchanged.
+jax[cuda12]==0.6.2; sys_platform == "linux"
+jax==0.6.2; sys_platform != "linux"
+jaxlib==0.6.2
+flax==0.10.6
+optax==0.2.5
+chex==0.1.90
+orbax-checkpoint==0.11.13
+nvidia-cudnn-cu12==9.8.0.87; sys_platform == "linux"

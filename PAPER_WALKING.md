@@ -73,34 +73,81 @@ uv pip sync --python .venv-paper/bin/python requirements-paper.lock
 installed environment; it does not install the lock, and can create an empty
 environment when none exists.
 
-## Launch the native trainer
+## RTX 5070 / Blackwell compatibility environment
 
-After installation, select the environment once per terminal:
+The RTX 5070 has compute capability 12.0 (Blackwell). JAX 0.4.28 predates
+this architecture: device enumeration can succeed while the first kernel
+fails with `ptxas fatal: Program with .target 'sm_90a' cannot be compiled to
+future architecture`. The reported driver 580.178.04 supports the CUDA 12.9
+runtime used below.
+
+Use the separate `requirements-paper-blackwell.lock` on Linux x86_64 with
+Python 3.10. It pins JAX/JAXlib/CUDA plugins 0.6.2, cuDNN 9.8.0.87, Flax
+0.10.6, Optax 0.2.5, Chex 0.1.90 and Orbax 0.11.13. This is a hardware
+compatibility variant of the published-era baseline. The Brax gitlink,
+MuJoCo/MJX 3.2.4, robot/reference files, native PPO and Table VI/VII settings
+are retained. The original `requirements-paper.lock` and environments remain
+available for comparison.
+
+First bring the compatibility changes from this repository to the GPU
+checkout. The original `586d4dd` commit does not contain this lock, the
+preflight module or the JAX matmul-precision compatibility fix.
+
+Create and install the separate environment once:
+
+```bash
+git submodule update --init --recursive
+uv venv --python 3.10 .venv-paper-blackwell
+uv pip sync --python .venv-paper-blackwell/bin/python requirements-paper-blackwell.lock
+```
+
+Select it once per terminal, then check the source, all active locked
+packages, other dependency requirements, GPU detection and JIT compilation:
+
+```bash
+export UV_PROJECT_ENVIRONMENT=.venv-paper-blackwell UV_PYTHON=3.10 WANDB_MODE=offline
+uv run --no-sync -m toddlerbot.locomotion.paper_environment --blackwell
+```
+
+The pinned Brax fork's package metadata still requires JAX/JAXlib 0.4.28 and
+Orbax 0.5.23. The compatibility lock explicitly overrides those three pins.
+`uv pip check` reports those three expected metadata conflicts in this
+environment; the preflight verifies the compatibility lock and permits only
+those declared Brax overrides. The Brax source remains clean at its pin.
+
+Run the short native PPO check before the long run:
+
+```bash
+uv run --no-sync -m toddlerbot.locomotion.train_mjx --gin-files "paper paper_smoke" --skip-video
+```
+
+`paper_smoke.gin` requests 40 transitions, one checkpoint and the XY suite
+with two short episodes per condition. It checks compilation, PPO updates,
+finite checkpoints and evaluation execution. It does not measure walking
+quality or establish memory fit for the full 1024 environments. The trainer
+records the actual installed packages and copies the matching dependency
+lock into each run's results.
+
+After both checks succeed, start the fresh 300M run:
+
+```bash
+uv run --no-sync -m toddlerbot.locomotion.train_mjx --gin-files paper --skip-video
+```
+
+## Launch the original baseline
+
+For the original baseline environment, select it once per terminal:
 
 ```bash
 export UV_PROJECT_ENVIRONMENT=.venv-paper UV_PYTHON=3.10 WANDB_MODE=offline
 ```
 
-Check GPU detection and actual JIT compilation before the long run. This
-loads the trainer's XLA settings and checks a small GPU matrix product
-against NumPy. Device enumeration alone does not verify compiler support.
+Check dependencies, the pinned source, GPU detection and actual JIT
+compilation before the long run. This uses the trainer's XLA settings.
 Continue only if this succeeds:
 
 ```bash
-uv run --no-sync python - <<'PY'
-from toddlerbot.locomotion import train_mjx
-import jax
-import jax.numpy as jnp
-import numpy as np
-
-print("JAX", jax.__version__, "devices", jax.devices())
-assert jax.default_backend() == "gpu"
-x = jnp.arange(64, dtype=jnp.float32).reshape(8, 8)
-actual = jax.jit(lambda a: a @ a.T)(x).block_until_ready()
-reference = np.asarray(x) @ np.asarray(x).T
-np.testing.assert_allclose(np.asarray(actual), reference, rtol=1e-5, atol=1e-5)
-print("GPU JIT compilation passed")
-PY
+uv run --no-sync -m toddlerbot.locomotion.paper_environment
 ```
 
 Then launch the native trainer directly:
@@ -110,7 +157,7 @@ uv run --no-sync -m toddlerbot.locomotion.train_mjx --gin-files paper --skip-vid
 ```
 
 The robot and environment default to `toddlerbot` and `walk`. `--no-sync`
-retains the packages installed from `requirements-paper.lock`.
+retains the packages installed from the selected dependency lock.
 
 Start fresh. Native `--restore` is a policy/value/normalizer warm start; it does
 not restore Adam, RNG, counters or environment state. `--skip-video` skips the
@@ -132,8 +179,11 @@ checkpoints using signed velocity, instantaneous vector tracking error,
 standing speed, leg motor RMSE, survival and recovery.
 
 The reference fixes, native recipe and checkpoint/evaluation execution have
-passed CPU checks. GPU compatibility, memory fit and learned walking still
-require execution on the GPU host. The existing focused checks run with:
+passed CPU checks. The Blackwell compatibility stack also passed all nine
+focused tests and the 40-transition native PPO smoke run, including a finite
+checkpoint and all 15 XY conditions, using its CPU dependency projection on
+the Mac. GPU compatibility, memory fit and learned walking still require
+execution on the GPU host. The existing focused checks run with:
 
 ```bash
 WANDB_MODE=disabled .venv-paper/bin/python -m unittest discover \

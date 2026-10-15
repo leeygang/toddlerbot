@@ -9,6 +9,7 @@ import copy
 import contextlib
 import io
 import json
+import hashlib
 import tempfile
 from collections import namedtuple
 from pathlib import Path
@@ -270,6 +271,18 @@ class PaperWalkingTest(unittest.TestCase):
                 self.assertEqual(
                     provenance["brax_revision"],
                     "14147806f6c25724ba830ba36764df3243889b0d",
+                )
+                expected_lock = {
+                    "0.4.28": "requirements-paper.lock",
+                    "0.6.2": "requirements-paper-blackwell.lock",
+                }[jax.__version__]
+                self.assertEqual(provenance["packages"]["jax"], jax.__version__)
+                self.assertEqual(provenance["dependency_lock"], expected_lock)
+                lock_bytes = (Path(folder) / expected_lock).read_bytes()
+                self.assertEqual(lock_bytes, Path(expected_lock).read_bytes())
+                self.assertEqual(
+                    provenance["dependency_lock_sha256"],
+                    hashlib.sha256(lock_bytes).hexdigest(),
                 )
 
 
