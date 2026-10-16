@@ -1,5 +1,12 @@
 # Paper walking baseline
 
+## Completed run and WR2 reference
+
+The GPU run completed **300,134,400 transitions** on the RTX 5070. See
+[the training results and WR2 reference](PAPER_WALKING_RESULTS.md) for all 15
+checkpoints, signed XY/standing/recovery metrics, CSV exports and plots.
+The 180M/200M checkpoints are reference candidates; falls increase late in the run.
+
 Run the experiment directly in this ToddlerBot repository on branch
 `paper-walking-baseline`. The branch starts at the local `v1.0.0` release,
 `59832cde2be3ab029486958f2e5ba92604f87307`, and retains its Brax gitlink,
