@@ -172,6 +172,57 @@ Walking-only error is approximately 0.0353–0.0471 m/s; stop speed is approxima
 
 Even the 180M survival reference has reset-standing speed **0.03085 m/s**, backward walking-phase error **0.04602 m/s**, and backward start error **0.05934 m/s**. Low falls do not establish perfect standing or recovery.
 
+## Comparing with ToddlerBot main
+
+The inspected local `main` and `origin/main` both point to **`f81679b72cca2cb227e190beeea18eed7894c10c`**. This is a comparison with the current local branch snapshot; the remote was not refreshed during this audit. Source values below were read with `git show main:<path>` from `walk.gin`, `ppo_config.py`, `mjx_config.py`, `mjx_env.py`, `train_mjx.py` and `pyproject.toml`.
+
+| Setting | Completed paper run | Main default walking implementation |
+| --- | --- | --- |
+| Robot | Published-era `toddlerbot` | `toddlerbot_2xc`; old `toddlerbot` description removed |
+| Trainer | Pinned native Brax PPO | RSL-RL by default; `--brax` selects Brax |
+| Training budget | 300M requested | 1B requested by `walk.gin` |
+| Network / exploration | Swish; state-dependent Normal followed by tanh | ELU; independent learned log std, Normal |
+| Learning rate | 1e-4 | 3e-5; adaptive schedule in RSL-RL |
+| Actor / critic history | 1,245 / 1,890 | 1,260 / 2,265, with torso quaternion observations |
+| XY reward | Weight 5; `exp(−100 e²)` | Weight 2; `exp(−1000 e²)` |
+| Leg reference imitation | Negative mean square motor error, weight 5 | `motor_pos` weight 0; weighted home-pose penalty 0.5 |
+| Survival | Height-terminal penalty, weight 10 | Alive reward 1; survival penalty weight 0 |
+| Native height termination | [0.20, 0.40] m | [0.20, 1.0] m on flat walking terrain |
+| Control / physics | 4 ms × 5 = 20 ms; MuJoCo/MJX 3.2.4 | 5 ms × 4 = 20 ms; project pins MuJoCo/MJX 3.3.4 |
+| Training commands | X [−0.10, +0.20], Y [−0.10, +0.10] m/s; yaw ±0.50 rad/s | X ±0.10, Y ±0.05 m/s; yaw ±1.0 rad/s |
+| Perturbation defaults | Native pushes enabled | `add_push=False`; `walk.gin` enables head-pose randomization |
+
+### First experiment: main with a matched budget and benchmark
+
+Use main's current walking rewards and observation/model implementation, select **`--brax`** for the first run, and keep the collected budget comparable: **fresh seed 0, 300M transitions, 1,024 environments, 20-step rollouts, batch 256 × 4 minibatches, 4 passes**. Keep main's learning rate/activation/distribution explicit in the saved config. This compares implementations while holding the PPO backend family and collection budget constant. Main's default RSL-RL behavior can be measured as a separate experiment.
+
+Prepare the comparison in an isolated worktree so both sources and environments remain available:
+
+```bash
+git worktree add -b main-walking-compare .worktrees/main-walking-compare main
+```
+
+Preparation needed before a long GPU run:
+
+1. Create a separate Blackwell-compatible main environment and pin the installed runtime. Main's project still pins JAX/JAXlib 0.4.28, which failed GPU compilation on the RTX 5070. The paper environment's old Brax fork also lacks main's additional `run_evals`, `value_obs_key` and distribution configuration keywords; it cannot be reused as a verified main runtime.
+2. Set coherent PPO sizes. Main's current defaults are **4,096 environments / batch 512 / 16 minibatches**, while its entry point asserts `num_envs == batch_size * num_minibatches`. The proposed **1,024 / 256 / 4** settings satisfy that assertion.
+3. Add a main-compatible adapter for the existing 15-condition quantitative protocol. Main uses dictionary observations and dictionary reference state; the paper evaluator uses a different interface. Main's current `--eval` path renders rollouts and exports policies, without producing the same condition/group measurements. Its CLI uses `--gin-file` and `--gin-config`, rather than the paper branch's `--gin-files`/`--skip-video`.
+4. Verify source imports, GPU JIT, a short native PPO update, checkpoint finiteness and evaluator execution before the full run. Retain checkpoints approximately every 20M **actual environment transitions**; main's RSL checkpoint filenames encode iterations, so record counters explicitly when comparing that backend.
+
+### Shared evaluation and interpretation
+
+Run **all 15 conditions, 128 episodes each, 1,000 control steps, deterministic policy inference** on both implementations. Compare signed mean velocity, instantaneous vector tracking error, standing speed, per-condition falls/length, start/stop recovery and leg motor RMSE. Evaluate the paper 180M/200M/240M/300M policies and main checkpoints near the same collected budgets.
+
+For a fair robustness comparison, specify a common push schedule, randomization/noise distributions and fall/termination definition. The two branches' native perturbations and height bounds differ. Use a nominal suite first and a separately defined shared robustness suite; preserve each branch's native terminal counts as additional diagnostics. Re-evaluate the paper policies when changing the protocol, rather than treating the existing native-variation measurements as results from the new suite.
+
+Measure each robot's nominal COM height and normalize commands/timing with `v / sqrt(g h)` and `T / sqrt(h / g)`. The WR2 scale in the next section applies to WR2 geometry, rather than main's `toddlerbot_2xc` model. Leg RMSE against each branch's own ZMP reference measures its own imitation error; a shared reference is needed to isolate imitation differences.
+
+Compare checkpoints on physical measurements and report reward curves within their own recipe. Use new held-out evaluation draws after choosing checkpoints. A single seed-0 training pair gives an initial comparison; independent training seeds are needed to establish repeatability.
+
+This first comparison changes robot, observations, rewards and runtime together. To isolate the recipe effect, train **paper-aligned and main recipes on the same model, same trainer and same runtime**, adapting the renamed reward/config fields explicitly. Compare RSL-RL versus Brax with the model and recipe fixed in a separate experiment.
+
+**Current evidence:** the copied May 15 main-run checkpoint directories are empty or contain only `model_0`; the previously reviewed long archive is currently absent except for its directory metadata. There is no trained main checkpoint here with the shared 15-condition measurements. Source differences alone do not establish which implementation walks better.
+
 ## WR2 comparison and source-confirmed differences
 
 The WR2 reference is the **corrected 600,023,040-transition continuation** reviewed on 2026-10-13, revision `93e4672ba252cde272a9c65ca0fcd282312d61bb`. Values below were read from its saved `candidate_comparison.json`, not transcribed solely from its prose report. That review uses seed 12102, 128 episodes, 20-second horizons, full configured variation, deterministic inference and episode-first overall means.
