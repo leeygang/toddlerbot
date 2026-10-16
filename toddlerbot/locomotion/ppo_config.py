@@ -28,6 +28,10 @@ class PPOConfig:
     init_noise_std: float = 0.5
     num_timesteps: int = 500_000_000
     num_evals: int = 100
+    num_eval_envs: int = 128
+    evaluate_xy: bool = False
+    evaluation_seed: int = 12102
+    training_metrics_steps: int | None = None
     episode_length: int = 0  # Auto-set by env from motion file; falls back to gin config if unavailable. Specify in gin or defaults to 0
     unroll_length: int = 20
     num_updates_per_batch: int = 4

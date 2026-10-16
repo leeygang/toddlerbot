@@ -9,7 +9,6 @@ from typing import Dict, Tuple
 import jax
 import joblib
 
-from toddlerbot.algorithms.zmp_walk import ZMPWalk
 from toddlerbot.reference.motion_ref import MotionReference
 from toddlerbot.sim.robot import Robot
 from toddlerbot.utils.array_utils import ArrayType, R, inplace_update
@@ -40,6 +39,8 @@ class WalkZMPReference(MotionReference):
         if os.path.exists(lookup_table_path):
             lookup_keys, motion_ref_list = joblib.load(lookup_table_path)
         else:
+            from toddlerbot.algorithms.zmp_walk import ZMPWalk
+
             zmp_walk = ZMPWalk(self.robot, self.cycle_time, 2.0)
             lookup_keys, motion_ref_list = zmp_walk.build_lookup_table(robot_suffix)
             joblib.dump(

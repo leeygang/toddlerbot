@@ -477,6 +477,7 @@ def get_body_mass_attr_range(
     hand_mass_range: list[float],
     other_mass_range: list[float],
     num_envs: int,
+    seed: int | None = None,
 ):
     """Generates a range of body mass attributes for a robot across multiple environments.
 
@@ -512,9 +513,10 @@ def get_body_mass_attr_range(
         other_mass_range[0], other_mass_range[1], num_envs
     )
     # Randomize the order of the body mass deltas
-    body_mass_delta_list = np.random.permutation(body_mass_delta_list)
-    hand_mass_delta_list = np.random.permutation(hand_mass_delta_list)
-    other_mass_delta_list = np.random.permutation(other_mass_delta_list)
+    permutation = np.random.permutation if seed is None else np.random.default_rng(seed).permutation
+    body_mass_delta_list = permutation(body_mass_delta_list)
+    hand_mass_delta_list = permutation(hand_mass_delta_list)
+    other_mass_delta_list = permutation(other_mass_delta_list)
 
     # Create lists to store attributes for all environments
     body_mass_list = []
@@ -755,6 +757,61 @@ def rollout(jit_reset, jit_step, inference_fn, train_cfg, use_torch, use_batch, 
     return states
 
 
+def make_xy_evaluators(env, train_cfg, make_policy):
+    from toddlerbot.locomotion.evaluate_xy import XYEvaluator
+
+    randomization_fn = None
+    if env.add_domain_rand:
+        cfg = env.cfg.domain_rand
+        mass_range = get_body_mass_attr_range(
+            env.robot, cfg.body_mass_range, cfg.hand_mass_range,
+            cfg.other_mass_range, train_cfg.num_eval_envs,
+            seed=train_cfg.evaluation_seed,
+        )
+        randomization_fn = functools.partial(
+            domain_randomize, friction_range=cfg.friction_range,
+            damping_range=cfg.damping_range, armature_range=cfg.armature_range,
+            frictionloss_range=cfg.frictionloss_range, body_mass_attr_range=mass_range,
+        )
+    return {profile: XYEvaluator(
+        env, make_policy, train_cfg.num_eval_envs, train_cfg.episode_length,
+        randomization_fn=randomization_fn, seed=train_cfg.evaluation_seed,
+        profile=profile,
+    ) for profile in ("nominal", "native")}
+
+
+def evaluate_native_checkpoint(env, train_cfg, policy_path):
+    from toddlerbot.locomotion.main_environment import (
+        ROOT, assert_finite, dependency_lock, installed_packages, sha256,
+    )
+
+    params = model.load_params(policy_path)
+    assert_finite(params, "checkpoint parameters")
+    networks = ppo_networks.make_ppo_networks(
+        {"state": env.obs_size * env.num_obs_history,
+         "privileged_state": env.privileged_obs_size * env.num_privileged_obs_history},
+        env.action_size, policy_hidden_layer_sizes=train_cfg.policy_hidden_layer_sizes,
+        value_hidden_layer_sizes=train_cfg.value_hidden_layer_sizes,
+        activation=getattr(linen, train_cfg.activation), value_obs_key="privileged_state",
+        distribution_type=train_cfg.distribution_type, noise_std_type=train_cfg.noise_std_type,
+        init_noise_std=train_cfg.init_noise_std, state_dependent_std=False,
+    )
+    evaluators = make_xy_evaluators(env, train_cfg, ppo_networks.make_inference_fn(networks))
+    output = {"checkpoint": policy_path, "checkpoint_sha256": sha256(policy_path),
+              "evaluation_head": git.Repo(".").head.commit.hexsha,
+              "evaluator_sha256": sha256(ROOT / "toddlerbot/locomotion/evaluate_xy.py"),
+              "packages": installed_packages(),
+              "lock_sha256": sha256(dependency_lock()),
+              "train_config": dataclass2dict(train_cfg), "env_config": dataclass2dict(env.cfg),
+              "evaluations": {name: evaluator.evaluate(params)
+                              for name, evaluator in evaluators.items()}}
+    path = os.path.join(os.path.dirname(policy_path),
+                        f"xy_{os.path.basename(policy_path)}_seed{train_cfg.evaluation_seed}.json")
+    with open(path, "w") as f:
+        json.dump(output, f, indent=2, allow_nan=False)
+    print("Saved quantitative evaluation:", path)
+
+
 def train(
     env: MJXEnv,
     eval_env: MJXEnv,
@@ -830,7 +887,10 @@ def train(
     # print("Env Config:")
     # print(json.dumps(env_config_dict, indent=4))  # Pretty-print the config
 
-    store_code_state(exp_folder_path, ".")
+    store_code_state(exp_folder_path, ["."])
+    if train_cfg.evaluate_xy:
+        from toddlerbot.locomotion.main_environment import write_provenance
+        write_provenance(exp_folder_path, env)
 
     note_list = []
     if len(args.note) > 0:
@@ -845,7 +905,7 @@ def train(
             project=train_cfg.wandb_project,
             entity=train_cfg.wandb_entity,
             job_type="train",
-            sync_tensorboard=True,
+            sync_tensorboard=args.torch,
             name=run_name,
             notes=notes,
             config={
@@ -872,6 +932,7 @@ def train(
                 env.cfg.domain_rand.hand_mass_range,
                 env.cfg.domain_rand.other_mass_range,
                 train_cfg.num_envs,
+                seed=train_cfg.seed,
             )
 
         domain_randomize_fn = functools.partial(
@@ -907,6 +968,15 @@ def train(
 
     def progress_fn(num_steps: int, metrics: dict[str, Any]):
         nonlocal defined_metrics, best_episode_reward, best_ckpt_step, last_ckpt_step
+        if train_cfg.evaluate_xy:
+            from toddlerbot.locomotion.main_environment import assert_finite
+            assert_finite(metrics, f"training metrics at {num_steps} steps")
+            with open(os.path.join(exp_folder_path, "metrics.jsonl"), "a") as f:
+                json.dump({"env_steps": int(num_steps),
+                           "walltime_s": time.monotonic() - times[0],
+                           "metrics": {key: float(value) for key, value in metrics.items()}},
+                          f, allow_nan=False)
+                f.write("\n")
         is_episode = any("episode" in k for k in metrics)
         times.append(time.monotonic())
         if is_episode:
@@ -938,15 +1008,39 @@ def train(
         if defined_metrics is not None:
             log_metrics(metrics, num_steps, defined_metrics)
 
-    render_interval = train_cfg.num_timesteps // train_cfg.render_nums
+    render_interval = (train_cfg.num_timesteps // train_cfg.render_nums
+                       if train_cfg.render_nums > 0 else 0)
     last_render_step = 0
+    xy_evaluators = None
 
     def policy_params_fn(current_step: int, make_policy: Any, params: Any):
-        nonlocal last_render_step
+        nonlocal last_render_step, last_ckpt_step, xy_evaluators
+        from toddlerbot.locomotion.main_environment import assert_finite, sha256
+        assert_finite(params, f"policy at {current_step} steps")
         policy_path = os.path.join(ckpt_dir, f"model_{current_step}")
         model.save_params(policy_path, params)
+        last_ckpt_step = current_step
+        with open(os.path.join(exp_folder_path, "checkpoints.jsonl"), "a") as f:
+            json.dump({"env_steps": int(current_step), "file": f"ckpt/model_{current_step}",
+                       "parameters_finite": True, "sha256": sha256(policy_path)}, f)
+            f.write("\n")
+        if train_cfg.evaluate_xy:
+            if xy_evaluators is None:
+                xy_evaluators = make_xy_evaluators(test_env, train_cfg, make_policy)
+            for profile, evaluator in xy_evaluators.items():
+                result = evaluator.evaluate(params)
+                with open(os.path.join(exp_folder_path, "xy_evaluation.jsonl"), "a") as f:
+                    json.dump({"env_steps": int(current_step), **result}, f, allow_nan=False)
+                    f.write("\n")
+                for condition in result["conditions"]:
+                    if condition["nonfinite_count"]:
+                        raise FloatingPointError(f"Nonfinite {profile} rollout: {condition['name']}")
+                tracking = result["conditions"][0]["groups"]["all"]["xy_error_m_s"]["mean"]
+                falls = sum(c["fall_count"] for c in result["conditions"])
+                print(f"XY {profile}, step {current_step}: falls={falls}/"
+                      f"{15 * train_cfg.num_eval_envs}, forward error={tracking}")
         # Handle rendering during training
-        if current_step - last_render_step >= render_interval:
+        if not args.skip_video and render_interval > 0 and current_step - last_render_step >= render_interval:
             # Create and JIT compile policy and environment functions
             eval_policy = make_policy(params, deterministic=True)
             render_fn(jax.jit(eval_policy), current_step)
@@ -1021,6 +1115,7 @@ def train(
                 distribution_type=train_cfg.distribution_type,
                 noise_std_type=train_cfg.noise_std_type,
                 init_noise_std=train_cfg.init_noise_std,
+                state_dependent_std=False,
             )
             ppo.train(
                 environment=env,
@@ -1042,6 +1137,7 @@ def train(
                 network_factory=make_networks_factory,
                 seed=train_cfg.seed,
                 num_evals=train_cfg.num_evals,
+                num_eval_envs=train_cfg.num_eval_envs,
                 eval_env=eval_env,
                 randomization_fn=domain_randomize_fn,
                 log_training_metrics=True,
@@ -1049,6 +1145,8 @@ def train(
                 policy_params_fn=policy_params_fn,
                 restore_params=restore_params,
                 run_evals=False,
+                bootstrap_on_timeout=False,
+                training_metrics_steps=train_cfg.training_metrics_steps,
             )
 
     except KeyboardInterrupt:
@@ -1076,6 +1174,8 @@ def train(
             available.append(int(name.split("_")[1].replace(suffix, "")))
 
     if len(available) > 0:
+        if not np.isfinite(best_episode_reward) and not args.torch:
+            best_ckpt_step = max(available)
         closest_best = min(available, key=lambda x: abs(x - best_ckpt_step))
         shutil.copy2(
             os.path.join(ckpt_dir, f"model_{closest_best}{suffix}"),
@@ -1260,6 +1360,8 @@ def main(args=None):
         default=False,
         help="Use brax instead of torch.",
     )
+    parser.add_argument("--skip-video", action="store_true",
+                        help="Skip video rendering during native Brax training.")
     parser.add_argument(
         "--symmetry",
         action="store_true",
@@ -1296,6 +1398,12 @@ def main(args=None):
     EnvClass = get_env_class(args.env.replace("_fixed", ""))
     env_cfg = MJXConfig()
     train_cfg = PPOConfig()
+
+    if train_cfg.evaluate_xy:
+        if args.torch:
+            raise ValueError("The main comparison quantitative path requires --brax.")
+        from toddlerbot.locomotion.main_environment import verify_runtime
+        verify_runtime(require_gpu=not args.eval and train_cfg.num_timesteps > 1_000_000)
 
     assert train_cfg.num_envs == train_cfg.num_minibatches * train_cfg.batch_size, (
         "The number of environments must match the number of minibatches times the batch size."
@@ -1339,7 +1447,10 @@ def main(args=None):
 
     if len(args.eval) > 0:
         if os.path.exists(args.eval):
-            evaluate(test_env, train_cfg, args.eval, args)
+            if train_cfg.evaluate_xy and not args.torch:
+                evaluate_native_checkpoint(test_env, train_cfg, args.eval)
+            else:
+                evaluate(test_env, train_cfg, args.eval, args)
         else:
             raise FileNotFoundError(f"{args.eval} not found.")
     else:

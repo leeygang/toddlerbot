@@ -1,0 +1,28 @@
+# Native main walking on Python 3.11; CUDA 12.9 supports the RTX 5070.
+# ToddlerBot is imported from this worktree, not installed with hardware extras.
+brax==0.14.2
+jax[cuda12]==0.6.2 ; sys_platform == 'linux'
+jax==0.6.2 ; sys_platform != 'linux'
+jaxlib==0.6.2
+nvidia-cudnn-cu12==9.8.0.87 ; sys_platform == 'linux'
+mujoco==3.3.4
+mujoco-mjx==3.3.4
+flax==0.10.6
+optax==0.2.5
+chex==0.1.90
+orbax-checkpoint==0.11.23
+numpy==1.26.4
+scipy==1.13.1
+control==0.9.4
+gin-config==0.5.0
+gitpython==3.2.0
+joblib==1.4.2
+lz4==4.3.3
+colorama==0.4.6
+line-profiler==4.2.0
+mediapy==1.2.2
+moviepy==1.0.3
+pyserial==3.5
+tqdm==4.66.5
+wandb==0.18.7
+pytest==8.3.5

@@ -345,10 +345,10 @@ class MJXEnv(PipelineEnv):
         # Automatically configure episode length based on motion reference, falls back to gin file if not available
         try:
             self.episode_length = max(
-                motion_ref.n_frames, get_env_config(name)[-1].episode_length
+                motion_ref.n_frames, PPOConfig().episode_length
             )
         except AttributeError:
-            self.episode_length = get_env_config(name)[-1].episode_length
+            self.episode_length = PPOConfig().episode_length
 
         # Get frame type from motion reference
         self.is_robot_relative_frame = getattr(
@@ -834,7 +834,7 @@ class MJXEnv(PipelineEnv):
         """
         return self.num_action
 
-    def reset(self, rng: jax.Array) -> State:
+    def reset(self, rng: jax.Array, command: jax.Array | None = None) -> State:
         """Resets the environment state and initializes various components for a new episode.
 
         This function splits the input random number generator (RNG) into multiple streams for different components, initializes the state information dictionary, and sets up the initial positions, velocities, and commands for the environment. It also applies domain randomization if enabled and prepares observation histories.
@@ -893,7 +893,8 @@ class MJXEnv(PipelineEnv):
         }
 
         state_ref = self.motion_ref.get_default_state()
-        command = self._sample_command(rng_command)
+        if command is None:
+            command = self._sample_command(rng_command)
 
         # Get initial state index
         if len(self.rand_init_state_indices) > 1:

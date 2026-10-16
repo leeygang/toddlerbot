@@ -1,0 +1,12 @@
+# Execution check only: 40 transitions, 0.4 s evaluations, full-size networks.
+# Load after main_compare. Transition windows at 3/9/12/17 s are not reached.
+PPOConfig.num_timesteps = 40
+PPOConfig.num_evals = 2
+PPOConfig.num_envs = 2
+PPOConfig.num_eval_envs = 2
+PPOConfig.episode_length = 20
+PPOConfig.unroll_length = 10
+PPOConfig.batch_size = 2
+PPOConfig.num_minibatches = 1
+PPOConfig.num_updates_per_batch = 1
+PPOConfig.training_metrics_steps = 40

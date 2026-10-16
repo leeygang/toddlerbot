@@ -1,0 +1,34 @@
+# Load after walk.gin. Preserve main's model, observations, rewards and variation.
+# Match the completed paper run's seed, collection budget and PPO batch geometry.
+PPOConfig.num_timesteps = 300_000_000
+PPOConfig.seed = 0
+PPOConfig.num_envs = 1024
+PPOConfig.episode_length = 1000
+PPOConfig.unroll_length = 20
+PPOConfig.batch_size = 256
+PPOConfig.num_minibatches = 4
+PPOConfig.num_updates_per_batch = 4
+PPOConfig.discounting = 0.97
+PPOConfig.gae_lambda = 0.95
+PPOConfig.learning_rate = 0.00003
+PPOConfig.entropy_cost = 0.0005
+PPOConfig.clipping_epsilon = 0.2
+PPOConfig.max_grad_norm = 1.0
+PPOConfig.normalize_advantage = True
+PPOConfig.normalize_observation = False
+PPOConfig.policy_hidden_layer_sizes = (512, 256, 128)
+PPOConfig.value_hidden_layer_sizes = (512, 256, 128)
+PPOConfig.activation = 'elu'
+PPOConfig.distribution_type = 'normal'
+PPOConfig.noise_std_type = 'log'
+PPOConfig.init_noise_std = 0.5
+PPOConfig.use_rnn = False
+
+# Native Brax calls the policy callback at step 0 and at 15 trained boundaries.
+# Ceil rounding gives 20,008,960-step intervals and 300,134,400 actual steps.
+PPOConfig.num_evals = 16
+PPOConfig.training_metrics_steps = 20_000_000
+PPOConfig.num_eval_envs = 128
+PPOConfig.evaluate_xy = True
+PPOConfig.evaluation_seed = 12102
+PPOConfig.render_nums = 0
