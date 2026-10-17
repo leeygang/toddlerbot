@@ -35,19 +35,27 @@ def dependency_lock():
 
 def check_dependencies():
     versions = installed_packages()
+    lock = dependency_lock()
     errors = []
     checked = 0
-    for line in dependency_lock().read_text().splitlines():
+    expected_cuda_packages = set()
+    for line in lock.read_text().splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
         req = Requirement(line)
         if req.marker is not None and not req.marker.evaluate({"extra": ""}):
             continue
-        version = versions.get(canonicalize_name(req.name))
+        name = canonicalize_name(req.name)
+        if name.startswith("jax-cuda"):
+            expected_cuda_packages.add(name)
+        version = versions.get(name)
         if version is None or version not in req.specifier:
             errors.append(f"{req}: installed {version or 'missing'}")
         checked += 1
+    for name, version in versions.items():
+        if name.startswith("jax-cuda") and name not in expected_cuda_packages:
+            errors.append(f"Unexpected CUDA package {name}=={version} for {lock.name}")
     for dist in metadata.distributions():
         for text in dist.requires or ():
             req = Requirement(text)
@@ -57,8 +65,13 @@ def check_dependencies():
             if version is None or version not in req.specifier:
                 errors.append(f"{dist.metadata['Name']} requires {req}: {version}")
     if errors:
-        raise RuntimeError("Dependency check failed:\n" + "\n".join(errors))
-    print(f"Verified {checked} active pins in {dependency_lock().name}.")
+        raise RuntimeError(
+            f"Dependency check failed for {sys.executable}.\n"
+            f"Sync {lock.name} into .venv-main-compare, then set "
+            "UV_PROJECT_ENVIRONMENT=.venv-main-compare UV_PYTHON=3.11.\n"
+            + "\n".join(errors)
+        )
+    print(f"Verified {checked} active pins in {lock.name}.")
 
 
 def verify_runtime(require_gpu=True):

@@ -1393,17 +1393,18 @@ def main(args=None):
         overrides = [s.strip() for s in args.gin_config.split(";") if s.strip()]
         gin.parse_config(overrides)
 
-    robot = Robot(args.robot)
-
-    EnvClass = get_env_class(args.env.replace("_fixed", ""))
     env_cfg = MJXConfig()
     train_cfg = PPOConfig()
 
+    # Validate the comparison runtime before Robot creates its first JAX array.
     if train_cfg.evaluate_xy:
         if args.torch:
             raise ValueError("The main comparison quantitative path requires --brax.")
         from toddlerbot.locomotion.main_environment import verify_runtime
         verify_runtime(require_gpu=not args.eval and train_cfg.num_timesteps > 1_000_000)
+
+    robot = Robot(args.robot)
+    EnvClass = get_env_class(args.env.replace("_fixed", ""))
 
     assert train_cfg.num_envs == train_cfg.num_minibatches * train_cfg.batch_size, (
         "The number of environments must match the number of minibatches times the batch size."

@@ -3,8 +3,8 @@
 This worktree prepares **`main-walking-compare`**, based on local `main` at
 **`f81679b72cca2cb227e190beeea18eed7894c10c`**, for a fresh comparison with the
 completed published-era walking run. Source, environments, and results stay in
-ToddlerBot. The paper checkout is available at `/Users/ygli/projects/toddlerbot`;
-its analysis is in `PAPER_WALKING_RESULTS.md` on `paper-walking-baseline`.
+ToddlerBot. The repository is at `/Users/ygli/projects/toddlerbot`; the paper
+analysis is in `PAPER_WALKING_RESULTS.md` on `paper-walking-baseline`.
 
 ## Experiment
 
@@ -77,6 +77,7 @@ file still specifies JAX 0.4.28. The training locks are installed explicitly wit
 ### Verify on the actual GPU
 
 ```bash
+export UV_PROJECT_ENVIRONMENT=.venv-main-compare UV_PYTHON=3.11 WANDB_MODE=offline
 uv run --no-sync -m toddlerbot.locomotion.main_environment
 uv run --no-sync -m toddlerbot.locomotion.train_mjx --brax --gin-file "main_compare main_compare_smoke" --skip-video
 ```
@@ -93,15 +94,31 @@ at the full 1,024-environment batch size. First compilation can take minutes.
 
 ### Full training command
 
-With the environment variables above set in the terminal:
+Set the environment in the same terminal used to launch training:
 
 ```bash
+export UV_PROJECT_ENVIRONMENT=.venv-main-compare UV_PYTHON=3.11 WANDB_MODE=offline
 uv run --no-sync -m toddlerbot.locomotion.train_mjx --brax --gin-file main_compare --skip-video
 ```
 
 No restore argument is supplied: this initializes a fresh seed-0 policy. The
 comparison path checks its runtime again at launch and rejects a CPU backend
 for a long run. The Mac has no verified NVIDIA GPU; full GPU training is pending.
+
+### JAX / CUDA plugin mismatch
+
+If a traceback names `.venv/lib/python3.11/site-packages`, `uv run` selected the
+general project environment. Environment exports apply only to the current
+terminal. Set the export above in each new terminal before running the comparison.
+
+An error such as `Mismatched PJRT plugin PJRT API version` or a CUDA 13 plugin's
+missing `register_custom_type_handler` indicates incompatible JAX packages in
+the selected environment. Prepare `.venv-main-compare` with the Linux lock above;
+its JAX, JAXlib and CUDA 12 plugins are all pinned to **0.6.2**. `uv pip sync`
+removes extra packages from that separate environment. The comparison checks
+dependencies and rejects unpinned CUDA plugins before creating robot JAX arrays.
+Confirm that preflight prints a Python path inside `.venv-main-compare`, then
+complete the GPU smoke check before launching 300M steps.
 
 ## Measurements and artifacts
 
