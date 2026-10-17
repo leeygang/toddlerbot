@@ -2,20 +2,25 @@
 
 ## Analysis status
 
-**The setup comparison and historical main failure analysis are complete for
-the artifacts available here.** The newly completed main GPU run has not yet
-been found in this local checkout, so its progress and physical walking quality
-remain unverified. The historical May main run is a separate 1B-step experiment.
+**The completed main and paper 300M runs are now available and verified.**
+Main's transferred full run is `toddlerbot_2xc_walk_brax_20261016_191310`;
+`182237` is a 40-step GPU smoke run. The historical May archive is a separate
+1B-step experiment.
 
 The strongest findings are:
 
+- Main finishes with finite metrics and policies, but **weak velocity-command
+  tracking**. Final fixed-command XY error is 0.083954 m/s in its native profile
+  and 0.079021 m/s nominally, compared with paper's native 0.037999 m/s.
 - For equal numeric action changes across 12 leg joints, main's action-change
   penalty is **480 times larger** than paper's. Main also has a much narrower
-  XY velocity reward and no active leg-reference imitation reward.
+  XY velocity reward and no active leg-reference imitation reward. These are
+  source-backed candidate causes; individual effects need controlled ablations.
 - The historical main run develops enormous policy means, then infinite value
   loss and NaN weights. A controlled synthetic probe reproduces action-history
   amplification with saved, finite policy weights. Bounding only the history
-  input prevents that amplification in the probe.
+  input prevents that amplification in the probe. This numerical failure is
+  absent from the completed fresh 300M main run.
 - Paper remains numerically finite through 300M. Its tracking improves mainly
   before 80M, while falls increase after 200M despite better leg imitation.
   The cause of that late survival regression has not been isolated.
@@ -23,6 +28,9 @@ The strongest findings are:
 The prepared comparison training code is `main-walking-compare` commit
 `990b8b0`, based on `main` at `f81679b`. The experiment is documented in
 [MAIN_WALKING_COMPARE.md](MAIN_WALKING_COMPARE.md).
+The actual GPU run records HEAD **`a8637a1`**. The later local trainer/dependency
+helper changes concern startup validation. Its reward/environment/evaluator
+source, effective settings and PPO call match the prepared comparison.
 
 Local data inspected:
 
@@ -31,12 +39,164 @@ Local data inspected:
 | Completed paper GPU run | `results/toddlerbot_walk_ppo_20261015_194347/` | Verified 300,134,400-transition baseline |
 | Main CPU smoke run | `.worktrees/main-walking-compare/results/toddlerbot_2xc_walk_brax_20261016_113551/` | 40 transitions; execution check only |
 | Historical main archive | `results/toddlerbot_2xc_walk_brax_20260515_114507/` | Previous 1B-transition experiment; 100 policy exports; numerical failure analyzed below |
-| New main GPU run | Not located under `results/` or the linked worktree's `results/` | Comparison pending |
+| Main GPU smoke run | `results/toddlerbot_2xc_walk_brax_20261016_182237/` | 40 transitions; execution check only |
+| Completed main GPU run | `results/toddlerbot_2xc_walk_brax_20261016_191310/` | Verified 300,134,400-transition comparison |
 | Local W&B records | `wandb/offline-run-20261015_194347-h1vcwang/` | Paper run; no new main W&B run located |
 
-The main smoke run and historical archive cannot establish the outcome of
-the newly completed main GPU run. A numerical failure is verified for the old
-run; a physical performance ranking for the fresh training pair is pending.
+The new main results below come directly from the transferred full run. Its
+missing W&B offline directory limits independent exit-status/GPU-utilization
+analysis; core progress, walking measurements and policy artifacts are complete.
+
+## Transferred main run verification
+
+The [main audit](docs/main_paper_walking_20261017/main_run_audit.json) confirms:
+
+- Fresh seed 0, native Brax PPO, empty restore path, 300M requested and
+  **300,134,400 actual transitions**. Effective settings match `main_compare.gin`.
+- **16 retained checkpoints**, initialization plus 15 trained boundaries. All
+  SHA-256 values match the manifest and every loaded parameter is finite.
+- `model_best` matches **220,098,560**; `model_last` matches **300,134,400**.
+- **30 finite metric records**: one episode-window callback and one epoch
+  training callback per trained boundary. Duplicate step numbers reflect these
+  two metric sources, rather than duplicate transfers.
+- **32 evaluation suites**: nominal and native at all 16 checkpoints;
+  **480 conditions / 61,440 episode-condition evaluations**, zero nonfinite.
+- Per-episode means, population standard deviations, fall counts, lengths and
+  group sample counts reconstruct; maximum summary difference is **8.32e-8**.
+  Scheduled group counts also reconstruct from episode length and transition time.
+- All **72 archived source hashes** match provenance, and all **28 model/reference
+  hashes** match the current local files. The two differing local source files
+  are the startup validation changes described above.
+- Recorded GPU: **RTX 5070, compute capability 12.0**; Python 3.11.14,
+  Brax 0.14.2, JAX/JAXlib 0.6.2, MuJoCo/MJX 3.3.4.
+
+## Measured final comparison
+
+All rows use the final **300,134,400-step** policy, ten fixed moving conditions,
+one standing condition and four transition conditions, 128 episodes each.
+Native variation differs between recipes, so these are descriptive results
+under the named profiles, rather than a common robustness experiment.
+
+| Measurement | Paper native | Main nominal | Main native |
+| --- | ---: | ---: | ---: |
+| Fixed-command XY error (m/s) | **0.037999** | 0.079021 | 0.083954 |
+| Fixed falls / 1,280 | 84 | 0 | 23 |
+| Standing speed (m/s) | 0.030955 | **0.019400** | 0.019769 |
+| Standing falls / 128 | 6 | 0 | 0 |
+| Transition falls / 512 | 44 | 0 | 5 |
+| All falls / 1,920 | 134 (6.979%) | 0 | 28 (1.458%) |
+| Mean episode length (steps) | 970.13 | 1,000.00 | 987.70 |
+| Fixed leg motor RMSE, own reference (rad) | 0.223045 | 0.424139 | 0.420792 |
+| Nonfinite episode evaluations | 0 | 0 | 0 |
+
+Main's native fixed-command error is **2.21 times** paper's. Main also undertracks
+without its native perturbations, so evaluation variation alone cannot explain
+its weak response. Different training variation, geometry, reference and
+runtime remain possible contributors.
+
+For an analytic policy with identically zero local XY velocity, mean error over
+these ten fixed commands would be **0.071623 m/s**. Both final main profiles are
+worse than that baseline, and none of their 15 trained checkpoints beats it.
+This is an analytic comparison, not a simulated standing-policy measurement.
+
+![Final signed command response](docs/main_paper_walking_20261017/main_paper_signed_response.png)
+
+The [PDF](docs/main_paper_walking_20261017/main_paper_signed_response.pdf) and
+[complete final-condition CSV](docs/main_paper_walking_20261017/main_paper_final_conditions.csv)
+retain both velocity components, vector error, speed, leg RMSE, population SD,
+falls, lengths and eligible counts for all conditions/groups.
+
+Mean measured velocity on the commanded axis:
+
+| Command (m/s) | Paper native | Main nominal | Main native |
+| --- | ---: | ---: | ---: |
+| Forward X +0.10 | +0.093669 | +0.000835 | +0.006191 |
+| Backward X −0.10 | −0.075575 | −0.002356 | −0.001106 |
+| Right Y −0.05 | −0.034911 | +0.001800 | +0.001440 |
+| Left Y +0.05 | +0.034733 | +0.003612 | +0.003468 |
+
+The forward/backward velocity difference divided by the 0.20 m/s command span
+is **84.6% for paper**, **1.6% for main nominal** and **3.6% for main native**.
+The corresponding lateral response ratios are **69.6%, 1.8% and 2.0%**. These
+describe the measured endpoint response; they are not uncertainty estimates
+or evidence that one isolated configuration change caused the gap.
+
+Lower standing speed and fewer falls do not establish successful commanded
+walking. Main scarcely translates along the requested axes. The existing paper
+native suite includes pushes, while main's profiles do not; a shared nominal
+and robustness re-evaluation is needed for a controlled survival comparison.
+Leg RMSE uses each recipe's own reference, not one shared motor trajectory.
+
+## Main and paper training progress
+
+![Verified main and paper progress](docs/main_paper_walking_20261017/main_paper_progress.png)
+
+The [PDF](docs/main_paper_walking_20261017/main_paper_progress.pdf),
+[matched physical progress CSV](docs/main_paper_walking_20261017/main_paper_matched_progress.csv)
+and [main native training CSV](docs/main_paper_walking_20261017/main_training_progress.csv)
+retain all trained checkpoints. The bottom return panels have different reward
+definitions and sampling sources; compare progress within each panel.
+
+| Actual steps (M) | Main training return | Nominal XY error (m/s) | Native XY error (m/s) | Nominal falls / 1,920 | Native falls / 1,920 | Native leg RMSE (rad) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 20.009 | 0.022 | 0.359273 | 0.391617 | 1,920 | 1,920 | 0.550888 |
+| 80.036 | 162.610 | 0.073792 | 0.075357 | 0 | 4 | 0.384459 |
+| 180.081 | 167.456 | 0.077670 | 0.081665 | 254 | 104 | 0.379262 |
+| 200.090 | 167.531 | 0.078845 | 0.081486 | 130 | 143 | 0.405184 |
+| **220.099 — return-best** | **184.216** | 0.078230 | 0.078578 | 0 | 4 | 0.397297 |
+| 240.108 | 165.909 | 0.080049 | 0.085582 | 128 | 355 | 0.413762 |
+| 280.125 | 183.127 | 0.077440 | 0.080638 | 1 | 40 | 0.402188 |
+| 300.134 | 177.361 | 0.079021 | 0.083954 | 0 | 28 | 0.420792 |
+
+Main destabilizes early at 20M, then improves survival sharply by 60–80M.
+Fixed-command error settles near 0.074–0.086 m/s, while its own-reference leg
+error remains above the initial nominal 0.235135 rad. The 220M return-best has
+low falls, but still weak tracking. Later checkpoints do not resolve that gap.
+Early terminated episodes and empty transition walking groups must retain
+their eligibility counts; missing groups are not assigned zero error.
+
+Main's final native training return is **177.361**, episode length **933.38**,
+epoch value loss **0.010139** and total loss **0.027967**, all finite. Median
+epoch throughput after the first stage is **44,624.7 transitions/s**; the
+native cumulative training timer is **7,006.453 s**, and the final epoch
+callback is at **10,396.557 s**. Paper's corresponding recorded training timer
+is 8,892.766 s, with median throughput about 34,400 transitions/s. Different
+robot/physics/learner implementations and callback/evaluation timing prevent
+attributing runtime differences to one change. Full W&B timing is unavailable
+for main.
+
+## What the new results support about the cause
+
+**The fresh main gap is weak command tracking, with finite optimization.** The
+May run's raw-history amplification mechanism remains a documented numerical
+risk, but it is not an observed failure of this 300M result.
+
+The measured behavior is consistent with the changed reward balance. Main's
+final native episode return decomposes approximately as follows:
+
+| Reward contribution | Mean contribution to native episode return |
+| --- | ---: |
+| Foot phase/height | **+123.242** |
+| Yaw velocity tracking | +23.778 |
+| Torso orientation | +22.289 |
+| Alive | +18.668 |
+| XY velocity tracking | **+9.880** |
+| Home-pose penalty | −11.066 |
+| Action-change penalty | −3.730 |
+| Foot orientation and roll/pitch-rate penalties | −5.698 |
+
+These contributions sum to 177.361 within native float32 accumulation precision.
+Foot height supplies about **12.5 times** the XY contribution. This is a
+random-command training window, including standing and turning, so it does
+not directly quantify reward under each fixed walking condition.
+
+The narrow velocity kernel, strong action smoothing and absent direct leg
+imitation provide plausible routes to a policy that earns posture/foot rewards
+with little commanded translation. The home-pose term adds static joint
+pressure, but its aggregate penalty is smaller than the foot-height reward;
+the data do not isolate it as the sole cause. Robot/reference changes, policy
+architecture and the lower learning rate are additional contributors to test.
+The controlled comparisons below specify how to separate their effects.
 
 ## Paper reference candidates
 
@@ -58,7 +218,7 @@ the paper implementation's own ZMP motor reference.
 
 ## Paper training progress
 
-![Paper baseline progress; main artifacts pending](docs/main_paper_walking_20261017/paper_progress.png)
+![Paper baseline progress](docs/main_paper_walking_20261017/paper_progress.png)
 
 The green interval marks the 180–200M candidates; the dashed line marks the
 240M native return-best. The [PDF](docs/main_paper_walking_20261017/paper_progress.pdf)
@@ -120,10 +280,10 @@ uses the raw JSON files present in this checkout.
 
 ## Training setup comparison
 
-These are the **prepared** main settings, pending confirmation from the new
-run's saved effective config and provenance:
+The main settings below are confirmed against the full GPU run's saved config,
+provenance and source snapshots:
 
-| Setting | Paper GPU run | Prepared main comparison |
+| Setting | Paper GPU run | Main GPU run |
 | --- | --- | --- |
 | Budget and seed | 300M requested / seed 0 | Same |
 | Collection and updates | 1,024 envs; rollout 20; batch 256; 4 minibatches; 4 passes | Same |
@@ -155,8 +315,8 @@ the effective configs and source hashes. Current main `walk.gin`,
 `main_compare.gin`, `mjx_env.py`, `walk_env.py` and `walk_zmp_ref.py` match the
 archived main CPU smoke provenance. Its environment config is unchanged by the
 full-training overlay. Every environment config section also matches the May
-archive. This verifies the prepared objectives; it does not substitute for the
-missing fresh GPU run's provenance.
+archive. The fresh GPU run's separate audit confirms its actual effective
+config and runtime, while preserving its recorded `a8637a1` source revision.
 
 Paper's cosine decay counts **optimizer updates**, with a 50M-update decay
 period. The 300M-transition budget performs 234,480 updates, so its learning
@@ -193,9 +353,9 @@ The error where each exponential drops to `1/e` of its peak is 0.10 m/s for
 paper and 0.03162 m/s for main. A main policy that stands or steps without
 translating under a 0.10 m/s command therefore gets almost no direct XY reward.
 Foot-height and posture objectives can remain rewarding in that situation.
-This is a concrete reason to test main's velocity kernel first if its measured
-policy undertracks commands. Reward values alone do not prove PPO gradient
-strength or demonstrate that the missing fresh main policy undertracks.
+Main's measured policy undertracks commands, making this velocity kernel a
+concrete first ablation. Reward values alone do not prove PPO gradient strength
+or isolate the kernel as the cause of the observed behavior.
 
 Sources: `_reward_lin_vel_xy` in the [frozen paper environment](results/toddlerbot_walk_ppo_20261015_194347/locomotion/mjx_env.py)
 and [main environment](toddlerbot/locomotion/mjx_env.py), with weights from the
@@ -244,8 +404,8 @@ when standing and up to **15** during swing, versus a maximum XY reward of 2.
 Foot-height matching can be successful without matching signed translation.
 Its flat-foot and close-foot penalties further shape the gait. These changes
 make stepping in place, more conservative joint motion, or a different gait
-plausible outcomes; the fresh main quantitative suite is needed to identify
-which behavior actually occurred.
+plausible outcomes. The fresh suite establishes weak translation, but does not
+visually identify the foot-motion pattern.
 
 Paper has additional active energy, torque, slip, collision, stand-still and
 ground-alignment terms that are inactive in this main recipe. Reward weight
@@ -379,13 +539,13 @@ The old run's full episode length/alive signal after NaNs is not proof of
 survival: a height comparison with NaN returns false. The prepared main code
 now rejects nonfinite metrics and policies at its progress/export checks, and
 its quantitative evaluator counts nonfinite episodes separately. The fresh
-run artifacts are still required to verify that those checks passed.
+run passes the metric/policy/measurement finiteness checks through 300M.
 
 ## Controlled comparisons to identify the walking-quality cause
 
-First audit the fresh main quantitative results at the paper's matched budgets.
-If a gap is measured, the following one-factor experiments can distinguish the
-source-backed hypotheses. Keep the main robot, physics/runtime, commands,
+The fresh main run has a measured tracking gap at the matched budgets. The
+following one-factor experiments can distinguish the source-backed hypotheses.
+Keep the main robot, physics/runtime, commands,
 randomization, seed and collection geometry fixed; each change gets a fresh
 run with the same checkpoint evaluations.
 
@@ -431,6 +591,8 @@ episode-first error against each implementation's own reference. Include falls,
 nonfinite counts, eligible sample counts and episode lengths beside error, since
 failed episodes have shorter measurement windows. Episode standard deviations
 describe one training seed's evaluation draws, not training-seed uncertainty.
+Main's nominal profile fixes model/reset settings. Small recorded variation
+between nominal batch instances does not represent independent training seeds.
 
 Raw native returns have different reward definitions and sampling sources; use
 their curves to understand each run's progress. Different robots, references,
@@ -442,19 +604,16 @@ The paper's Table II value of 0.016 m/s comes from its square-trajectory experim
 That experiment's filtering and aggregation differ from the instantaneous vector
 error measured here, so it is not an identical acceptance threshold for this suite.
 
-## Data needed to finish
+## Remaining comparison limits
 
-Provide the actual local path of the newly completed main run, or finish copying
-its full `results/toddlerbot_2xc_walk_brax_<timestamp>/` folder into this repository.
-The essential files are `metrics.jsonl`, `xy_evaluation.jsonl`, `checkpoints.jsonl`,
-`train_config.json`, `env_config.json`, `provenance.json`, `output.log` and `ckpt/`.
-Its complete W&B offline directory can confirm exit status and GPU timing/load.
+The core copied artifacts are complete. Main's W&B offline directory can add
+independent exit-status and GPU timing/load records, but is not required for
+the physical result analysis above.
 
-The remaining report work is to audit that run, add both main profile progress
-curves, compare matched checkpoints and final signed-condition measurements,
-and identify main tracking/survival candidates. The setup analysis and
-historical numerical diagnosis above are already supported by the available
-files.
+Paper nominal re-evaluation and a shared robustness profile are still needed
+to control evaluation variation. Independent training seeds, fresh evaluation
+draws and the proposed ablations are needed to establish repeatability and
+attribute the gap to a specific setup change. No ablation result is claimed.
 
 ## Reproducing this analysis
 
@@ -464,10 +623,12 @@ local archived run folders:
 ```sh
 .venv-main-compare/bin/python docs/main_paper_walking_20261017/inspect_historical_main.py
 .venv-main-compare/bin/python docs/main_paper_walking_20261017/analyze_setup.py
+.venv-main-compare/bin/python docs/main_paper_walking_20261017/analyze_main_run.py
 ```
 
 These scripts inspect saved weights, probe the actor without physics, parse
-the historical console and generate the setup audit, CSV and figures. The
+the historical console, verify transferred main artifacts and generate the
+setup/run audits, CSV files and figures. The
 compressed [probe traces](docs/main_paper_walking_20261017/historical_policy_probe_traces.npz)
 retain all seven scenarios with both history variants. No training source or
 training hyperparameters were changed for this analysis.

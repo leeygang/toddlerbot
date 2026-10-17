@@ -148,9 +148,10 @@ and stop measurement windows. All, standing, walking, start and stop groups reta
 
 Finite terminal samples are included, then the episode is frozen. Nonfinite
 samples are excluded and recorded separately. Measurements are normalized within
-each eligible episode before averaging episodes. Fully deterministic nominal
-episodes are repeated copies of the same trajectory; their standard deviation
-does not measure uncertainty across independent training seeds.
+each eligible episode before averaging episodes. Nominal fixes model/reset
+settings, but the GPU archive records small variation between batch instances.
+Their standard deviation does not measure uncertainty across independent
+training seeds.
 
 Evaluation seed **12102** provides independent evaluation model/reset draws;
 the same draws are reused across conditions and checkpoints. Host mass-grid

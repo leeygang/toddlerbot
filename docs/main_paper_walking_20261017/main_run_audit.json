@@ -1,0 +1,178 @@
+{
+  "analysis_date": "2026-10-17",
+  "status": "ready_for_physical_result_analysis",
+  "main_run": "results/toddlerbot_2xc_walk_brax_20261016_191310",
+  "smoke_run": "results/toddlerbot_2xc_walk_brax_20261016_182237",
+  "source_revision": "a8637a1d8caca07ebe9c0119cad942f75ff38014",
+  "main_base": "f81679b72cca2cb227e190beeea18eed7894c10c",
+  "recorded_git_status": "?? toddlerbot/brax/\n",
+  "devices": [
+    {
+      "kind": "NVIDIA GeForce RTX 5070",
+      "platform": "gpu",
+      "compute_capability": "12.0"
+    }
+  ],
+  "packages": {
+    "brax": "0.14.2",
+    "jax": "0.6.2",
+    "jaxlib": "0.6.2",
+    "flax": "0.10.6",
+    "mujoco": "3.3.4",
+    "mujoco-mjx": "3.3.4"
+  },
+  "requested_steps": 300000000,
+  "actual_steps": 300134400,
+  "seed": 0,
+  "checkpoint_records": 16,
+  "checkpoint_hashes_verified": true,
+  "all_loaded_checkpoint_parameters_finite": true,
+  "native_return_best_step": 220098560,
+  "native_return_best": 184.21635729789733,
+  "metric_records": 30,
+  "metric_records_per_trained_step": 2,
+  "all_native_scalar_metrics_finite": true,
+  "metric_callback_note": "episode-window callback and epoch training callback have distinct metrics and times; preserve both",
+  "evaluation_audit": {
+    "suites": 32,
+    "conditions": 480,
+    "episode_conditions": 61440,
+    "nonfinite_episode_conditions": 0,
+    "max_summary_reconstruction_difference": 8.323171118984618e-08,
+    "group_counts_reconstruct_from_episode_length_and_schedule": true
+  },
+  "source_snapshots_verified": 72,
+  "local_model_reference_hashes_verified": 28,
+  "local_source_files_differing_from_run": [
+    "toddlerbot/locomotion/main_environment.py",
+    "toddlerbot/locomotion/train_mjx.py"
+  ],
+  "source_difference_note": "local train entry point moves preflight before Robot creation; dependency helper rejects unexpected CUDA plugins. Reward, environment, evaluator and PPO call are unchanged.",
+  "fresh_effective_config_matches_prepared_overlay": true,
+  "paper_inputs_match_prior_audit": true,
+  "main_wandb_offline_directory_available": false,
+  "input_sha256": {
+    "results/toddlerbot_2xc_walk_brax_20261016_191310/args.json": "0e132f29aa9f66386326869378c195909476178de0139b192ba5a56c3ecd3b51",
+    "results/toddlerbot_2xc_walk_brax_20261016_191310/train_config.json": "4cae8044a584372867edd0bd739a64180d62f06843099b4efb12ad906f5555a3",
+    "results/toddlerbot_2xc_walk_brax_20261016_191310/env_config.json": "0564622467b2c8fa09e3bd5032357c9462c8dccca47a7463272ef63d672fb1de",
+    "results/toddlerbot_2xc_walk_brax_20261016_191310/provenance.json": "aab8c64d0350a160fe52b90856f1ff4690abe327c983c39fa8bcb9db1a0748ca",
+    "results/toddlerbot_2xc_walk_brax_20261016_191310/metrics.jsonl": "822c738d4d6e1f6e831e0adb94fc14b536fd630ee190f7727cc9c54fe3f5b318",
+    "results/toddlerbot_2xc_walk_brax_20261016_191310/checkpoints.jsonl": "78924e99a9f6b26212a645cadcf6ef3595146015e081ba7a55292c30b6c2a988",
+    "results/toddlerbot_2xc_walk_brax_20261016_191310/xy_evaluation.jsonl": "adf8db6092d9c2ee197022c119d90c24b968945b42fd4ee606b0d969689bf2a9",
+    "results/toddlerbot_2xc_walk_brax_20261016_191310/output.log": "59dd22184d6c193710c2801836f4b40b0beeb3116a6c0d01359ca3a4465d651e",
+    "results/toddlerbot_2xc_walk_brax_20261016_191310/model_best": "b156d6584d2654822d1875b4252abd3b4b9a713a57bd56969bd001bac5945b3a",
+    "results/toddlerbot_2xc_walk_brax_20261016_191310/model_last": "275c81733eeb028b3a913bc6dea6c73ccc668133ba0c514a57497fd922173aa7"
+  },
+  "checkpoint_sha256": {
+    "ckpt/model_0": "d265b15b6fc1b0ee565fdac2bc3b459484dc6e22a7bdb728aba51c0467b204da",
+    "ckpt/model_20008960": "9345c9e8a3de1ceb42812eba71e09b0a38e6ff009b312fce036a710e501e6e3d",
+    "ckpt/model_40017920": "51fc40940c878a47137196e79f7db22b5e6999345bbb8b3e1e92a7228f3344bc",
+    "ckpt/model_60026880": "3b53a977f00febdda8016464785d4db2a8ca4b1c50185ec4d8b7b9a076fbec19",
+    "ckpt/model_80035840": "5e951162615ca3dd6e4d68b1d84cec769933f2ff330ad44479f4b4a6c1892082",
+    "ckpt/model_100044800": "6ca02c8b57f6c6d2052f34c71f023a11cbb90f398152a59adebe5a6281432895",
+    "ckpt/model_120053760": "ddf7bb4eb9ff04d17a7159fa0117c227dccc60795b53220229e7b143174f1a0c",
+    "ckpt/model_140062720": "fbeca692605712dcc595e1874cf18a3bda1baa58709a2978719829db5814ead4",
+    "ckpt/model_160071680": "178814c2b2d600e52949b86bd9f4d451847c99b667856022a91af078d145ddc2",
+    "ckpt/model_180080640": "4b62425e8ef95b5617383d2057ad88f91d1b57d15fae00140f1345859e21f42e",
+    "ckpt/model_200089600": "28e313ea8f8956e4997d1787ce873a4a8b5385e2aaafd1c13a38515dbb118356",
+    "ckpt/model_220098560": "b156d6584d2654822d1875b4252abd3b4b9a713a57bd56969bd001bac5945b3a",
+    "ckpt/model_240107520": "430ad31a8967baf2a7320b8b6b991c51278ad00d2faa2ff93eab61ccc8e234d5",
+    "ckpt/model_260116480": "286410d93ac9b07a73bac77045177cca929dc8a0fa656f24e782087c4161e221",
+    "ckpt/model_280125440": "1910973f7f60e59b2bbb364199a10b7732a7569e37a93dc39d28f2e9b043d017",
+    "ckpt/model_300134400": "275c81733eeb028b3a913bc6dea6c73ccc668133ba0c514a57497fd922173aa7"
+  },
+  "final_progress": [
+    {
+      "env_steps": 300134400,
+      "profile": "main_native",
+      "fixed_xy_error_m_s": 0.08395406939089298,
+      "fixed_leg_motor_rmse_rad": 0.42079219222068787,
+      "fixed_falls": 23,
+      "fixed_episodes": 1280,
+      "standing_speed_m_s": 0.019769122824072838,
+      "standing_falls": 0,
+      "transition_falls": 5,
+      "transition_walking_xy_error_m_s": 0.07739401701837778,
+      "transition_walking_eligible_conditions": 4,
+      "transition_walking_eligible_episodes": 509,
+      "all_falls": 28,
+      "all_episodes": 1920,
+      "nonfinite_episode_conditions": 0,
+      "mean_episode_length": 987.7005208333334
+    },
+    {
+      "env_steps": 300134400,
+      "profile": "main_nominal",
+      "fixed_xy_error_m_s": 0.079020581766963,
+      "fixed_leg_motor_rmse_rad": 0.4241386532783508,
+      "fixed_falls": 0,
+      "fixed_episodes": 1280,
+      "standing_speed_m_s": 0.01939995028078556,
+      "standing_falls": 0,
+      "transition_falls": 0,
+      "transition_walking_xy_error_m_s": 0.07567331660538912,
+      "transition_walking_eligible_conditions": 4,
+      "transition_walking_eligible_episodes": 512,
+      "all_falls": 0,
+      "all_episodes": 1920,
+      "nonfinite_episode_conditions": 0,
+      "mean_episode_length": 1000.0
+    },
+    {
+      "env_steps": 300134400,
+      "profile": "paper_native",
+      "fixed_xy_error_m_s": 0.03799913078546524,
+      "fixed_leg_motor_rmse_rad": 0.2230454221367836,
+      "fixed_falls": 84,
+      "fixed_episodes": 1280,
+      "standing_speed_m_s": 0.030955402180552483,
+      "standing_falls": 6,
+      "transition_falls": 44,
+      "transition_walking_xy_error_m_s": 0.040396212600171566,
+      "transition_walking_eligible_conditions": 4,
+      "transition_walking_eligible_episodes": 511,
+      "all_falls": 134,
+      "all_episodes": 1920,
+      "nonfinite_episode_conditions": 0,
+      "mean_episode_length": 970.1333333333333
+    }
+  ],
+  "final_signed_response_ratios": [
+    {
+      "profile": "main_nominal",
+      "forward_backward_command_response_ratio": 0.015954210539348423,
+      "left_right_command_response_ratio": 0.018119883025065064
+    },
+    {
+      "profile": "main_native",
+      "forward_backward_command_response_ratio": 0.03648380748927593,
+      "left_right_command_response_ratio": 0.020283848280087113
+    },
+    {
+      "profile": "paper_native",
+      "forward_backward_command_response_ratio": 0.8462207019329071,
+      "left_right_command_response_ratio": 0.6964480131864548
+    }
+  ],
+  "median_main_epoch_training_sps_after_first": 44624.69148740212,
+  "final_native_training_timer_s": 7006.452962875366,
+  "final_epoch_callback_walltime_s": 10396.556659627007,
+  "max_reward_component_reconstruction_gap": 2.291617394689638e-05,
+  "final_return_components": {
+    "torso_quat": 22.288522283935546,
+    "lin_vel_xy": 9.879979196611641,
+    "ang_vel_z": 23.77810580368042,
+    "penalty_ang_vel_xy": -1.8601283714294434,
+    "penalty_action_rate": -3.7300645584106444,
+    "penalty_pose": -11.06610283279419,
+    "penalty_close_feet_xy": 0.0,
+    "alive": 18.6676,
+    "feet_phase": 123.24173135986328,
+    "penalty_feet_ori": -3.8382436172485352
+  },
+  "analytic_zero_velocity_fixed_xy_error_m_s": 0.0716227766016838,
+  "trained_main_checkpoints_below_analytic_zero_velocity_error": {
+    "main_nominal": 0,
+    "main_native": 0
+  }
+}

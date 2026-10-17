@@ -1,8 +1,8 @@
 {
   "analysis_date": "2026-10-17",
-  "status": "waiting_for_completed_main_run_artifacts",
+  "status": "paper_baseline_verified_main_run_now_available",
   "paper_run": "results/toddlerbot_walk_ppo_20261015_194347",
-  "main_run": null,
+  "main_run": "results/toddlerbot_2xc_walk_brax_20261016_191310",
   "source_revision": "1982ef3bf540fd5280bfe89937b57866f94de8de",
   "requested_steps": 300000000,
   "actual_steps": 300134400,
@@ -21,5 +21,6 @@
     "train_config.json": "9ca4257cf0078ddbfcbedc6436d256a2a99e73c9ba328f562e98713c2531cf57",
     "env_config.json": "0f5e9609734b321af3e129a3c54e2a42bf4144f3903ec1accf07c392f0048e16",
     "provenance.json": "31e7b5635c5a1a28eef05d618d55ac0d48d92d104eb00107e0bdc51a5188b514"
-  }
+  },
+  "main_audit": "main_run_audit.json"
 }

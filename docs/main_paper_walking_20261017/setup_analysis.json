@@ -1,5 +1,5 @@
 {
-  "status": "prepared setup verified; historical main failure diagnosed; new main GPU results absent",
+  "status": "prepared setup and historical main diagnostics verified; fresh GPU run is audited separately in main_run_audit.json",
   "input_sha256": {
     "results/toddlerbot_walk_ppo_20261015_194347/env_config.json": "0f5e9609734b321af3e129a3c54e2a42bf4144f3903ec1accf07c392f0048e16",
     "results/toddlerbot_walk_ppo_20261015_194347/train_config.json": "9ca4257cf0078ddbfcbedc6436d256a2a99e73c9ba328f562e98713c2531cf57",
@@ -103,7 +103,7 @@
     "num_minibatches": 4,
     "seed": 0
   },
-  "prepared_main_config_source": "main_compare.gin overlay plus smoke defaults; not the missing GPU run config",
+  "prepared_main_config_source": "main_compare.gin overlay plus smoke defaults; actual GPU config confirmation is in main_run_audit.json",
   "historical_main_train_config": {
     "wandb_project": "ToddlerBot",
     "wandb_entity": "toddlerbot",

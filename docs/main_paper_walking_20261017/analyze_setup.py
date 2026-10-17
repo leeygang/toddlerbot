@@ -174,12 +174,12 @@ def main():
         OUT / "historical_policy_audit.json", OUT / "historical_policy_probe_traces.npz",
     ]
     analysis = {
-        "status": "prepared setup verified; historical main failure diagnosed; new main GPU results absent",
+        "status": "prepared setup and historical main diagnostics verified; fresh GPU run is audited separately in main_run_audit.json",
         "input_sha256": {str(p.relative_to(ROOT)): sha256(p) for p in inputs},
         "current_sources_match_main_smoke_provenance": source_hashes,
         "paper_train_config": paper_train,
         "prepared_main_train_config": main_train,
-        "prepared_main_config_source": "main_compare.gin overlay plus smoke defaults; not the missing GPU run config",
+        "prepared_main_config_source": "main_compare.gin overlay plus smoke defaults; actual GPU config confirmation is in main_run_audit.json",
         "historical_main_train_config": old_train,
         "historical_main_env_sections_match_prepared_main": env_matches,
         "reward_comparison": {
