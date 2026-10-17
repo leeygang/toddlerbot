@@ -1,0 +1,25 @@
+{
+  "analysis_date": "2026-10-17",
+  "status": "waiting_for_completed_main_run_artifacts",
+  "paper_run": "results/toddlerbot_walk_ppo_20261015_194347",
+  "main_run": null,
+  "source_revision": "1982ef3bf540fd5280bfe89937b57866f94de8de",
+  "requested_steps": 300000000,
+  "actual_steps": 300134400,
+  "metric_records": 15,
+  "evaluation_suites": 15,
+  "conditions": 225,
+  "episode_conditions": 28800,
+  "nonfinite_episodes": 0,
+  "scalar_metrics_finite": true,
+  "step_lists_match": true,
+  "per_episode_summaries_reconstructed": true,
+  "max_summary_reconstruction_difference": 3.8300640881061554e-08,
+  "input_sha256": {
+    "metrics.jsonl": "0f58d7fdac1722adf8beaeb4294c69f0993806173f20b9e0adaf293361759ae7",
+    "xy_evaluation.jsonl": "bd9a0fb4a717e6091dd85277dc6540c15970ea94e7ff95b3b0e91902178e465c",
+    "train_config.json": "9ca4257cf0078ddbfcbedc6436d256a2a99e73c9ba328f562e98713c2531cf57",
+    "env_config.json": "0f5e9609734b321af3e129a3c54e2a42bf4144f3903ec1accf07c392f0048e16",
+    "provenance.json": "31e7b5635c5a1a28eef05d618d55ac0d48d92d104eb00107e0bdc51a5188b514"
+  }
+}
