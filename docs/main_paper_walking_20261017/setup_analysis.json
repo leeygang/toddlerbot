@@ -1,0 +1,527 @@
+{
+  "status": "prepared setup verified; historical main failure diagnosed; new main GPU results absent",
+  "input_sha256": {
+    "results/toddlerbot_walk_ppo_20261015_194347/env_config.json": "0f5e9609734b321af3e129a3c54e2a42bf4144f3903ec1accf07c392f0048e16",
+    "results/toddlerbot_walk_ppo_20261015_194347/train_config.json": "9ca4257cf0078ddbfcbedc6436d256a2a99e73c9ba328f562e98713c2531cf57",
+    "results/toddlerbot_walk_ppo_20261015_194347/provenance.json": "31e7b5635c5a1a28eef05d618d55ac0d48d92d104eb00107e0bdc51a5188b514",
+    "results/toddlerbot_walk_ppo_20261015_194347/locomotion/mjx_env.py": "6bb0caca7e3ce50a0764a58d73d6015c1a3fd4f9fc5d60f759eabf653cba44e4",
+    "results/toddlerbot_walk_ppo_20261015_194347/locomotion/train_mjx.py": "7c675174a386df2eb78a05cd512dbea629b7d92ca891b890c2f5a5771e3ee327",
+    ".worktrees/main-walking-compare/results/toddlerbot_2xc_walk_brax_20261016_113551/env_config.json": "0564622467b2c8fa09e3bd5032357c9462c8dccca47a7463272ef63d672fb1de",
+    ".worktrees/main-walking-compare/results/toddlerbot_2xc_walk_brax_20261016_113551/train_config.json": "2c0c6a9f47f0cf103f8493347e1f06e0095aebbf1d4c975e85d111d63446b85b",
+    ".worktrees/main-walking-compare/results/toddlerbot_2xc_walk_brax_20261016_113551/provenance.json": "49f2ac2b2189ca43d7ee7e219cabd26c9b33bce0f374c379f7e1a95647ea3029",
+    "results/toddlerbot_2xc_walk_brax_20260515_114507/output.log": "28496256152717988b3daa1ad604c7a20dae2157353cc8c700d041bfabf4aa08",
+    "results/toddlerbot_2xc_walk_brax_20260515_114507/train_config.json": "c62215a94485cf11609379525998b471a29e314f6edb0d79f6651aa16c6c47ed",
+    "results/toddlerbot_2xc_walk_brax_20260515_114507/env_config.json": "0564622467b2c8fa09e3bd5032357c9462c8dccca47a7463272ef63d672fb1de",
+    "results/toddlerbot_2xc_walk_brax_20260515_114507/args.json": "87d2a7019332e43243cb2c5a7f3100b8bda94e36d9e9ad92656e3a63875df14a",
+    "results/toddlerbot_2xc_walk_brax_20260515_114507/git/toddlerbot.diff": "4c37769b1713d38bf1874c9053d1f16b601cdcf0b3817bcff15b564c2ab92a34",
+    "toddlerbot/locomotion/train_mjx.py": "bf7dcc4669f07107d6e38c2d38111c1b53bfe0058c365ee5e6419139d1c616c3",
+    "toddlerbot/brax/brax/training/agents/ppo/train.py": "e927ab48cb00055a0086e563d0cf29a642dc96b5ee37688a547e773123560464",
+    "toddlerbot/brax/brax/training/distribution.py": "198e359da456cb762fc672be536dd7af117c24690fe60cb0a6d938a0def01e0e",
+    ".venv-main-compare/lib/python3.11/site-packages/brax/training/networks.py": "309c253f0f613f907d12a3f8d49952b4bc99d0a896beaccec47b95e73556d197",
+    ".venv-main-compare/lib/python3.11/site-packages/brax/training/agents/ppo/train.py": "32ed2754f3f9b545c7f381aba9953d1160ca82cc0d01deb59d1f5847872eea32",
+    "docs/main_paper_walking_20261017/historical_policy_audit.json": "c118d78e794f9cb24c65f93c6d176a8884a67313624e73534c166ebcced754e9",
+    "docs/main_paper_walking_20261017/historical_policy_probe_traces.npz": "f191cf275310ef3f2b43e65aff199e6423816ba83759d19a530838d62021a9b7"
+  },
+  "current_sources_match_main_smoke_provenance": {
+    "toddlerbot/locomotion/walk.gin": "374ff02f2a242c16e340c82cc5d7654501ce8e29ead0a56deba42a9ff755fc6c",
+    "toddlerbot/locomotion/main_compare.gin": "f3d191265d92b470a8f2ddf6c7437b2e6bca643fdc9a88d89ea1f0d89bd738bf",
+    "toddlerbot/locomotion/walk_env.py": "217f0a8331d8440e091cb0cd1ca0236dcec913bbf43ee27a9dc9634cf90d30f7",
+    "toddlerbot/locomotion/mjx_env.py": "05dc6bc2fede94361be85636a30a3260c4d1baaab6fbfdebbb4d3ba6b09e7703",
+    "toddlerbot/reference/walk_zmp_ref.py": "47bd3af38cbea002ad384140f686a409537a423e55dec8a7dab9134b22b3608d"
+  },
+  "paper_train_config": {
+    "policy_hidden_layer_sizes": [
+      512,
+      256,
+      128
+    ],
+    "value_hidden_layer_sizes": [
+      512,
+      256,
+      128
+    ],
+    "num_timesteps": 300000000,
+    "num_evals": 16,
+    "num_eval_envs": 128,
+    "evaluate_xy": true,
+    "episode_length": 1000,
+    "unroll_length": 20,
+    "num_updates_per_batch": 4,
+    "discounting": 0.97,
+    "learning_rate": 0.0001,
+    "decay_steps": 50000000,
+    "alpha": 0.1,
+    "entropy_cost": 0.0005,
+    "clipping_epsilon": 0.2,
+    "num_envs": 1024,
+    "render_interval": 0,
+    "batch_size": 256,
+    "num_minibatches": 4,
+    "seed": 0
+  },
+  "prepared_main_train_config": {
+    "wandb_project": "ToddlerBot",
+    "wandb_entity": "toddlerbot",
+    "policy_hidden_layer_sizes": [
+      512,
+      256,
+      128
+    ],
+    "value_hidden_layer_sizes": [
+      512,
+      256,
+      128
+    ],
+    "use_rnn": false,
+    "rnn_type": "lstm",
+    "rnn_hidden_size": 512,
+    "rnn_num_layers": 1,
+    "activation": "elu",
+    "distribution_type": "normal",
+    "noise_std_type": "log",
+    "init_noise_std": 0.5,
+    "num_timesteps": 300000000,
+    "num_evals": 16,
+    "num_eval_envs": 128,
+    "evaluate_xy": true,
+    "evaluation_seed": 12102,
+    "training_metrics_steps": 20000000,
+    "episode_length": 1000,
+    "unroll_length": 20,
+    "num_updates_per_batch": 4,
+    "discounting": 0.97,
+    "gae_lambda": 0.95,
+    "max_grad_norm": 1.0,
+    "normalize_advantage": true,
+    "normalize_observation": false,
+    "learning_rate": 3e-05,
+    "entropy_cost": 0.0005,
+    "clipping_epsilon": 0.2,
+    "num_envs": 1024,
+    "render_nums": 0,
+    "batch_size": 256,
+    "num_minibatches": 4,
+    "seed": 0
+  },
+  "prepared_main_config_source": "main_compare.gin overlay plus smoke defaults; not the missing GPU run config",
+  "historical_main_train_config": {
+    "wandb_project": "ToddlerBot",
+    "wandb_entity": "toddlerbot",
+    "policy_hidden_layer_sizes": [
+      512,
+      256,
+      128
+    ],
+    "value_hidden_layer_sizes": [
+      512,
+      256,
+      128
+    ],
+    "use_rnn": false,
+    "rnn_type": "lstm",
+    "rnn_hidden_size": 512,
+    "rnn_num_layers": 1,
+    "activation": "elu",
+    "distribution_type": "normal",
+    "noise_std_type": "log",
+    "init_noise_std": 0.5,
+    "num_timesteps": 1000000000,
+    "num_evals": 100,
+    "episode_length": 1000,
+    "unroll_length": 20,
+    "num_updates_per_batch": 4,
+    "discounting": 0.97,
+    "gae_lambda": 0.95,
+    "max_grad_norm": 1.0,
+    "normalize_advantage": true,
+    "normalize_observation": false,
+    "learning_rate": 3e-05,
+    "entropy_cost": 0.0005,
+    "clipping_epsilon": 0.2,
+    "num_envs": 2048,
+    "render_nums": 20,
+    "batch_size": 128,
+    "num_minibatches": 16,
+    "seed": 0
+  },
+  "historical_main_env_sections_match_prepared_main": {
+    "action": true,
+    "commands": true,
+    "curriculum": true,
+    "domain_rand": true,
+    "noise": true,
+    "obs": true,
+    "obs_scales": true,
+    "obstacle_rand": true,
+    "reward_scales": true,
+    "rewards": true,
+    "sim": true,
+    "terrain": true
+  },
+  "reward_comparison": {
+    "control_period_s": 0.02,
+    "controlled_leg_actions": 12,
+    "xy_formulas_before_dt": {
+      "paper": "5 * exp(-100 * e^2)",
+      "main": "2 * exp(-1000 * e^2)"
+    },
+    "xy_e_fold_width_m_s": {
+      "paper": 0.1,
+      "main": 0.03162277660168379
+    },
+    "xy_examples": [
+      {
+        "xy_vector_error_m_s": 0.0,
+        "paper_weighted_reward_before_dt": 5.0,
+        "main_weighted_reward_before_dt": 2.0,
+        "paper_over_main": 2.5
+      },
+      {
+        "xy_vector_error_m_s": 0.02,
+        "paper_weighted_reward_before_dt": 4.803947195761616,
+        "main_weighted_reward_before_dt": 1.3406400920712787,
+        "paper_over_main": 3.583323536400851
+      },
+      {
+        "xy_vector_error_m_s": 0.03,
+        "paper_weighted_reward_before_dt": 4.569655926356141,
+        "main_weighted_reward_before_dt": 0.8131393194811982,
+        "paper_over_main": 5.6197699666911785
+      },
+      {
+        "xy_vector_error_m_s": 0.05,
+        "paper_weighted_reward_before_dt": 3.8940039153570245,
+        "main_weighted_reward_before_dt": 0.16416999724779752,
+        "paper_over_main": 23.719339590896325
+      },
+      {
+        "xy_vector_error_m_s": 0.075,
+        "paper_weighted_reward_before_dt": 2.848914123654615,
+        "main_weighted_reward_before_dt": 0.007213126272031461,
+        "paper_over_main": 394.9624637379686
+      },
+      {
+        "xy_vector_error_m_s": 0.1,
+        "paper_weighted_reward_before_dt": 1.8393972058572112,
+        "main_weighted_reward_before_dt": 9.079985952496955e-05,
+        "paper_over_main": 20257.709818938496
+      },
+      {
+        "xy_vector_error_m_s": 0.15,
+        "paper_weighted_reward_before_dt": 0.5269961228093216,
+        "main_weighted_reward_before_dt": 3.383795845230261e-10,
+        "paper_over_main": 1557411105.4961135
+      },
+      {
+        "xy_vector_error_m_s": 0.2,
+        "paper_weighted_reward_before_dt": 0.09157819444367082,
+        "main_weighted_reward_before_dt": 8.496708510583118e-18,
+        "paper_over_main": 1.0778078867788064e+16
+      }
+    ],
+    "action_penalty_main_over_paper_for_equal_numeric_deltas": 480.0,
+    "main_sum_weight_matching_paper_mean_weight": 0.004166666666666667,
+    "action_rms_delta_0_1_penalty_before_dt": {
+      "paper": 0.0005000000000000001,
+      "main": 0.24000000000000005
+    }
+  },
+  "historical_console": {
+    "progress_blocks": 24453,
+    "actual_final_steps": 1001594880,
+    "checkpoint_count": 100,
+    "checkpoint_steps": [
+      0,
+      10117120,
+      20234240,
+      30351360,
+      40468480,
+      50585600,
+      60702720,
+      70819840,
+      80936960,
+      91054080,
+      101171200,
+      111288320,
+      121405440,
+      131522560,
+      141639680,
+      151756800,
+      161873920,
+      171991040,
+      182108160,
+      192225280,
+      202342400,
+      212459520,
+      222576640,
+      232693760,
+      242810880,
+      252928000,
+      263045120,
+      273162240,
+      283279360,
+      293396480,
+      303513600,
+      313630720,
+      323747840,
+      333864960,
+      343982080,
+      354099200,
+      364216320,
+      374333440,
+      384450560,
+      394567680,
+      404684800,
+      414801920,
+      424919040,
+      435036160,
+      445153280,
+      455270400,
+      465387520,
+      475504640,
+      485621760,
+      495738880,
+      505856000,
+      515973120,
+      526090240,
+      536207360,
+      546324480,
+      556441600,
+      566558720,
+      576675840,
+      586792960,
+      596910080,
+      607027200,
+      617144320,
+      627261440,
+      637378560,
+      647495680,
+      657612800,
+      667729920,
+      677847040,
+      687964160,
+      698081280,
+      708198400,
+      718315520,
+      728432640,
+      738549760,
+      748666880,
+      758784000,
+      768901120,
+      779018240,
+      789135360,
+      799252480,
+      809369600,
+      819486720,
+      829603840,
+      839720960,
+      849838080,
+      859955200,
+      870072320,
+      880189440,
+      890306560,
+      900423680,
+      910540800,
+      920657920,
+      930775040,
+      940892160,
+      951009280,
+      961126400,
+      971243520,
+      981360640,
+      991477760,
+      1001594880
+    ],
+    "first_nonfinite_by_field": {
+      "total_loss": {
+        "env_steps": 231219200,
+        "value": "inf"
+      },
+      "v_loss": {
+        "env_steps": 231219200,
+        "value": "inf"
+      },
+      "entropy_loss": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "kl_mean": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_dist_max_loc": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_dist_max_std": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_dist_mean_loc": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_dist_mean_std": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_dist_min_loc": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_dist_min_std": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_loss": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "ang_vel_z": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "feet_phase": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "lin_vel_xy": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "penalty_action_rate": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "penalty_ang_vel_xy": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "penalty_feet_ori": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "penalty_pose": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "torso_quat": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "mean_reward": {
+        "env_steps": 232857600,
+        "value": "nan"
+      }
+    },
+    "first_nan_by_field": {
+      "entropy_loss": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "kl_mean": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_dist_max_loc": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_dist_max_std": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_dist_mean_loc": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_dist_mean_std": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_dist_min_loc": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_dist_min_std": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "policy_loss": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "total_loss": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "v_loss": {
+        "env_steps": 232816640,
+        "value": "nan"
+      },
+      "ang_vel_z": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "feet_phase": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "lin_vel_xy": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "penalty_action_rate": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "penalty_ang_vel_xy": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "penalty_feet_ori": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "penalty_pose": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "torso_quat": {
+        "env_steps": 232857600,
+        "value": "nan"
+      },
+      "mean_reward": {
+        "env_steps": 232857600,
+        "value": "nan"
+      }
+    },
+    "catastrophic_return_matches_action_penalty": [
+      {
+        "env_steps": 229990400,
+        "native_return": -19556508798594.92,
+        "dt_times_action_penalty": -19556506517123.43,
+        "relative_gap": 1.1666046919128106e-07
+      },
+      {
+        "env_steps": 231178240,
+        "native_return": -2.0685387131256813e+17,
+        "dt_times_action_penalty": -2.0685391969107994e+17,
+        "relative_gap": 2.3387772005918747e-07
+      },
+      {
+        "env_steps": 231219200,
+        "native_return": -3.006382934029079e+17,
+        "dt_times_action_penalty": -3.006383138538244e+17,
+        "relative_gap": 6.802498859515609e-08
+      },
+      {
+        "env_steps": 232693760,
+        "native_return": -2.1085372802373392e+24,
+        "dt_times_action_penalty": -2.1085372248971068e+24,
+        "relative_gap": 2.624579273623295e-08
+      }
+    ],
+    "precision_note": "native scalar console output is rounded, mostly to four decimal places"
+  }
+}
