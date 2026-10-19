@@ -1,4 +1,4 @@
-# Main versus paper walking results — 2026-10-17
+# Main versus paper walking results — reviewed 2026-10-18
 
 ## Analysis status
 
@@ -12,18 +12,49 @@ The strongest findings are:
 - Main finishes with finite metrics and policies, but **weak velocity-command
   tracking**. Final fixed-command XY error is 0.083954 m/s in its native profile
   and 0.079021 m/s nominally, compared with paper's native 0.037999 m/s.
+- Paper **180M and 200M remain the physical reference candidates**. Their native
+  fall counts are 3 and 8 out of 1,920, compared with 134 at 300M. Confirm these
+  candidates on fresh evaluation draws before selecting a policy.
 - For equal numeric action changes across 12 leg joints, main's action-change
   penalty is **480 times larger** than paper's. Main also has a much narrower
   XY velocity reward and no active leg-reference imitation reward. These are
   source-backed candidate causes; individual effects need controlled ablations.
-- The historical main run develops enormous policy means, then infinite value
-  loss and NaN weights. A controlled synthetic probe reproduces action-history
-  amplification with saved, finite policy weights. Bounding only the history
-  input prevents that amplification in the probe. This numerical failure is
-  absent from the completed fresh 300M main run.
 - Paper remains numerically finite through 300M. Its tracking improves mainly
   before 80M, while falls increase after 200M despite better leg imitation.
   The cause of that late survival regression has not been isolated.
+- The historical May main run's action-history amplification remains a
+  documented numerical risk. The fresh main run has finite policies and metrics
+  throughout; recovering command tracking is the immediate training priority.
+
+## Priority review — 2026-10-18
+
+**The physical conclusions are confirmed directly from the copied results.**
+The [independent review](docs/main_paper_walking_20261017/review_20261018.json)
+rechecks all 15 previously audited input hashes, 31 retained policy files and
+both runs' best/last aliases. All parameters and 45 scalar metric records are
+finite. The 47 evaluation suites contain **90,240 episode-condition evaluations**
+with zero nonfinite results; per-episode summaries and group counts reconstruct
+within 8.33e-8. All 32 main console evaluation records agree with the raw data.
+The core input files are unchanged from the previous analysis.
+
+The additional checkpoint check strengthens the main conclusion. At 80M, main's
+forward/backward response ratio is **−0.15% nominally and −1.39% natively**, despite
+its relatively low fixed-command error. At the 220M return-best, it is only
+**1.22% and 1.36%**. Selecting either checkpoint does not recover useful command
+following. Their metrics remain useful diagnostic baselines.
+
+| Priority | Concrete next step | Evidence and decision criterion |
+| --- | --- | --- |
+| **1 — Recover main command tracking** | First test only `lin_vel_tracking_sigma: 1000 → 100`, holding XY weight at 2. Independently test only summed action-change weight `2 → 0.0041666667` against the original main baseline. | Main undertracks even nominally and every trained checkpoint is worse than the analytic zero-velocity error. These two source-confirmed reward differences are direct hypotheses to test. |
+| **2 — Preserve the paper reference candidates** | Retain paper 180M and 200M; re-evaluate on fresh draws, including a common nominal profile with main. Keep native variation results alongside them. | Paper 180M has the fewest recorded falls; 200M has the lowest recorded fixed-command error. Paper's native pushes differ from main's, so current fall rates do not establish a controlled robustness ranking. |
+| **3 — Screen by physical outcomes at intermediate checkpoints** | Inspect 20M, 40M, 60M and 80M before extending a variant to 300M. Require correct signed axis response, fixed-command error below the 0.071623 m/s analytic zero-velocity baseline, and report falls, lengths, standing and transition behavior. | Higher native return and surviving at rest do not establish commanded walking. These are minimum screening criteria; a final quality target should use the freshly evaluated paper candidates under the same profile. |
+
+If those reward ablations do not recover tracking, test direct leg imitation,
+then isolate the home-pose term. Keep finite-action and target-saturation
+diagnostics during every experiment. Changes to action bounds, learning rate,
+network or physics should each answer a measured issue in a separate comparison.
+The observed return contributions and coefficient ratios do not identify one
+proven cause; no reward ablation has yet been run.
 
 The prepared comparison training code is `main-walking-compare` commit
 `990b8b0`, based on `main` at `f81679b`. The experiment is documented in
@@ -272,11 +303,17 @@ hashes and the checks run directly against the copied paper artifacts:
   from the per-episode arrays to within 1e-6.
 - The archived source revision is `1982ef3bf540fd5280bfe89937b57866f94de8de`.
   Provenance retains its recorded dirty-source flag.
+- The 2026-10-18 review compares all **11 archived locomotion source files**
+  byte-for-byte with that commit and verifies all **12 recorded model/reference
+  hashes** against it. All match. The dirty flag does not record the scope of
+  other files; the archived training source and recorded model files are verified.
 
 The earlier paper report and detailed source/checkpoint audit are retained on
 `paper-walking-baseline` as `PAPER_WALKING_RESULTS.md` and
-`docs/paper_walking_20261016/audit.json`. This report's newly computed baseline
-uses the raw JSON files present in this checkout.
+`docs/paper_walking_20261016/audit.json`. A copied version of the earlier
+[audit](results/toddlerbot_walk_ppo_20261015_194347/analysis_wr2_20261016/assets/toddlerbot_paper_walking_20261016/audit.json)
+is also present with the run. This report's baseline and review use the raw JSON
+files present in this checkout.
 
 ## Training setup comparison
 
@@ -544,18 +581,24 @@ run passes the metric/policy/measurement finiteness checks through 300M.
 ## Controlled comparisons to identify the walking-quality cause
 
 The fresh main run has a measured tracking gap at the matched budgets. The
-following one-factor experiments can distinguish the source-backed hypotheses.
+following experiments can distinguish the source-backed hypotheses.
 Keep the main robot, physics/runtime, commands,
 randomization, seed and collection geometry fixed; each change gets a fresh
-run with the same checkpoint evaluations.
+run with the same checkpoint evaluations. The first two change one scalar
+setting each and compare independently with the original main baseline.
 
-| Priority | Intervention | Question answered |
+| Experiment order | Intervention | Question answered |
 | --- | --- | --- |
-| 1 | Check raw means/history, applied-target saturation and finite metrics; test a consistent bounded action/history design in a separate experiment | Does numerical action-history amplification occur, and can it be contained while preserving a feasible gait range? |
-| 2 | Main XY weight 5 and tracking coefficient 100; other objectives fixed | Does a broader velocity reward improve signed command following? |
-| 3 | Main summed action-change weight 0.0041666667; other objectives fixed | Does paper-strength first-difference smoothing improve motion/exploration? |
-| 4 | Add negative-mean-square leg imitation at weight 5 using main's own reference; keep home-pose penalty fixed initially | Does explicit reference guidance improve imitation, tracking or falls? |
-| 5 | With leg imitation held fixed, reduce or remove the home-pose term | Does the static home target conflict with the walking reference? |
+| **1** | Main `lin_vel_tracking_sigma=100`; keep `lin_vel_xy=2` and every other setting fixed | Does a broader velocity reward improve signed command following? |
+| **2** | Main summed action-change weight 0.0041666667; keep the original XY kernel and other objectives fixed | Does paper-strength first-difference smoothing improve motion/exploration? |
+| 3, if needed | Add negative-mean-square leg imitation at weight 5 using main's own reference; keep the home-pose penalty fixed initially | Does explicit reference guidance improve imitation, tracking or falls? |
+| 4, after imitation is isolated | With leg imitation held fixed, reduce or remove the home-pose term | Does the static home target conflict with the walking reference? |
+
+The earlier proposal changed XY weight and width together. The revised first
+experiment isolates width. A later weight-only comparison can hold width fixed
+and change `lin_vel_xy: 2 → 5`. Continue monitoring raw means/history, applied
+target saturation and finite metrics. Test a bounded action/history design if
+those measurements establish a problem in the fresh recipe.
 
 Main's existing leg tracking function can produce negative MSE with
 `RewardsConfig.use_exp_reward=False` and leg weight 1. Setting `motor_pos=5`
@@ -571,13 +614,13 @@ general cause. Paper's tracking plateau and late fall regression are observed
 trends; correlation with improved imitation does not establish imitation as
 their cause.
 
-## How the physical results will be compared
+## Physical measurement protocol
 
 Main's quantitative evaluator uses the shared [0.20, 0.40] m benchmark height
 range and the same 15 signed conditions, 128 episodes per condition, 1,000-step
 horizon, 20 ms control period and evaluation seed 12102. Automatic resets and
-internal motion teleports are disabled during measurement. Verify these values
-in the transferred suites before combining progress tables.
+internal motion teleports are disabled during measurement. These values and
+the per-episode group counts have been verified in the transferred suites.
 
 Compare physical tracking, standing, falls, episode length and leg imitation
 at matched actual transition counts, especially approximately 180M, 200M, 240M
@@ -597,7 +640,7 @@ between nominal batch instances does not represent independent training seeds.
 Raw native returns have different reward definitions and sampling sources; use
 their curves to understand each run's progress. Different robots, references,
 observations, action distributions, randomization and runtimes prevent attributing
-any eventual performance difference to one reward or trainer change. Compare
+the measured performance difference to one reward or trainer change. Compare
 geometry-normalized velocity and time using each measured nominal COM height.
 
 The paper's Table II value of 0.016 m/s comes from its square-trajectory experiment.
@@ -618,7 +661,13 @@ attribute the gap to a specific setup change. No ablation result is claimed.
 ## Reproducing this analysis
 
 From this checkout, with the preserved CPU comparison environment and the
-local archived run folders:
+local archived run folders, rerun the current review with:
+
+```sh
+.venv-main-compare/bin/python docs/main_paper_walking_20261017/review_results.py
+```
+
+The earlier supporting analyses can also be reproduced:
 
 ```sh
 .venv-main-compare/bin/python docs/main_paper_walking_20261017/inspect_historical_main.py
