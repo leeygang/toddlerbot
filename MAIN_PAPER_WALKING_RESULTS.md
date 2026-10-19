@@ -46,7 +46,7 @@ following. Their metrics remain useful diagnostic baselines.
 | Priority | Concrete next step | Evidence and decision criterion |
 | --- | --- | --- |
 | **1 — Recover main command tracking** | First test only `lin_vel_tracking_sigma: 1000 → 100`, holding XY weight at 2. Independently test only summed action-change weight `2 → 0.0041666667` against the original main baseline. | Main undertracks even nominally and every trained checkpoint is worse than the analytic zero-velocity error. These two source-confirmed reward differences are direct hypotheses to test. |
-| **2 — Preserve the paper reference candidates** | Retain paper 180M and 200M; re-evaluate on fresh draws, including a common nominal profile with main. Keep native variation results alongside them. | Paper 180M has the fewest recorded falls; 200M has the lowest recorded fixed-command error. Paper's native pushes differ from main's, so current fall rates do not establish a controlled robustness ranking. |
+| **2 — Preserve the paper reference candidates** | Retain paper 180M and 200M; re-evaluate on fresh draws, including a common nominal profile with main. Keep native variation results alongside them. | Paper 180M has the fewest recorded falls; 200M has the lowest recorded fixed-command error. Paper's model/reset/noise variation differs from main's, so current fall rates do not establish a controlled robustness ranking. Its configured pushes are physically dropped, as explained below. |
 | **3 — Screen by physical outcomes at intermediate checkpoints** | Inspect 20M, 40M, 60M and 80M before extending a variant to 300M. Require correct signed axis response, fixed-command error below the 0.071623 m/s analytic zero-velocity baseline, and report falls, lengths, standing and transition behavior. | Higher native return and surviving at rest do not establish commanded walking. These are minimum screening criteria; a final quality target should use the freshly evaluated paper candidates under the same profile. |
 
 If those reward ablations do not recover tracking, test direct leg imitation,
@@ -55,6 +55,24 @@ diagnostics during every experiment. Changes to action bounds, learning rate,
 network or physics should each answer a measured issue in a separate comparison.
 The observed return contributions and coefficient ratios do not identify one
 proven cause; no reward ablation has yet been run.
+
+### WR2 follow-up — 2026-10-18
+
+The user selected WR2 for the implementation follow-up. Its main default
+legacy recipe has the same narrow velocity reward and strong summed action
+cost. Local WR2 commit **`b7f731d`** corrects the default reward radius using
+measured CoM scaling, matches paper-strength mean smoothing through the summed
+weight, separates the tracking metric from reward width, and prepares a fresh
+200M signed-XY trial. **79 tests and the exact-config native CPU smoke pass**;
+improved walking is not yet measured. This combined correction does not
+isolate the individual causal effects.
+
+WR2's current paper recipe already has broad tracking and mean smoothing, so
+these legacy changes do not resolve its paper-recipe plateau. The fix is
+committed in an isolated checkout because this session cannot write WR2;
+canonical WR2 remains at `b8727a1`. The verified transfer bundle is
+`.worktrees/wr2-walking-tracking-b7f731d.bundle`, and its implementation report
+is `docs/design/wr2_tracking_reward_fix_20261018.md` within that WR2 commit.
 
 The prepared comparison training code is `main-walking-compare` commit
 `990b8b0`, based on `main` at `f81679b`. The experiment is documented in
@@ -154,9 +172,30 @@ or evidence that one isolated configuration change caused the gap.
 
 Lower standing speed and fewer falls do not establish successful commanded
 walking. Main scarcely translates along the requested axes. The existing paper
-native suite includes pushes, while main's profiles do not; a shared nominal
-and robustness re-evaluation is needed for a controlled survival comparison.
+native suite has different model/reset/noise variation; its configured pushes
+are physically dropped. A shared nominal and robustness re-evaluation is needed
+for a controlled survival comparison.
 Leg RMSE uses each recipe's own reference, not one shared motor trajectory.
+
+### Effective push exposure — source correction, 2026-10-18
+
+The frozen paper `MJXEnv.step()` samples root-velocity pushes but changes only
+`pipeline_state.qd`. Its pinned Brax MJX pipeline integrates `qvel`, then
+rebuilds `qd` from `qvel`; the motor controller reads velocities after the six
+root coordinates. Consequently these requests do not physically perturb the
+robot. Sampled push labels remain in the privileged observations. Earlier
+wording in this report incorrectly treated the configured pushes as realized.
+
+This follows directly from the archived
+`results/toddlerbot_walk_ppo_20261015_194347/locomotion/mjx_env.py` and pinned
+`toddlerbot/brax/brax/mjx/pipeline.py`. The sibling WR2
+`docs/design/wr2_actuator_gap_review_20261018.md`, section 5, independently
+confirms zero qpos/qvel change for a qd-only push and +0.4833 m/s forward qvel
+for a synchronized 0.5 m/s request. Its paired fresh 200M evaluation is an
+additional experiment, separate from the original results tabulated here.
+The existing paper tracking/fall measurements remain valid under their actual
+exposure; they do not demonstrate robustness to realized pushes. Main's weak
+signed response remains directly measured in both its profiles.
 
 ## Main and paper training progress
 
@@ -343,9 +382,9 @@ provenance and source snapshots:
 | Training command ranges | X [−0.10, +0.20], Y ±0.10 m/s; yaw ±0.50 rad/s | X ±0.10, Y ±0.05 m/s; yaw ±1.0 rad/s |
 | Command mixture | Standing 20%; turning 30%; walking 50% | Standing 20%; turning 20%; walking 60% |
 | Friction / actuator parameter variation | Friction [0.5, 2.0]; torque/speed parameters ±20% | Friction [0.4, 1.0]; torque/speed parameters ±10% |
-| IMU and head variation | Published-era noise; pushes enabled | Colored quaternion/gyro noise and head-pose variation; pushes disabled |
+| IMU and head variation | Published-era noise; sampled push labels, physically dropped | Colored quaternion/gyro noise and head-pose variation; pushes disabled |
 | Logged native return | Independent random-command evaluation episodes | Collected training episodes; native Brax evaluations disabled |
-| Quantitative profiles | Native variation including pushes | Nominal and main-native variation; pushes disabled |
+| Quantitative profiles | Native model/reset/noise variation; configured pushes physically dropped | Nominal and main-native variation; pushes disabled |
 
 The [setup audit](docs/main_paper_walking_20261017/setup_analysis.json) records
 the effective configs and source hashes. Current main `walk.gin`,
@@ -470,7 +509,7 @@ The nominal paper COM height previously measured in the paper audit is
 0.297811 m; main's recorded nominal COM height is 0.282244 m. Their velocity
 scales `sqrt(g h)` differ by about 2.7%. That normalization cannot account for
 the different motor models, posture, references, servo behavior or physics
-version. Command coverage, pushes and noise are additional confounders.
+version. Command coverage, privileged push labels and noise are additional confounders.
 
 ## What caused the historical main numerical failure
 
@@ -625,8 +664,9 @@ the per-episode group counts have been verified in the transferred suites.
 Compare physical tracking, standing, falls, episode length and leg imitation
 at matched actual transition counts, especially approximately 180M, 200M, 240M
 and 300M. Keep main's nominal and native profiles separate. The existing paper
-data include its native pushes and other variation; a controlled nominal
-comparison requires a nominal re-evaluation of the paper checkpoints.
+data include its native model/reset/noise variation and sampled push labels,
+with physical pushes dropped. A controlled nominal comparison requires a
+nominal re-evaluation of the paper checkpoints.
 
 XY error is the episode-first mean instantaneous vector error in the full torso
 quaternion frame. Standing speed is mean instantaneous XY speed. Leg RMSE is
